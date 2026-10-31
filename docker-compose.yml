@@ -1,0 +1,16 @@
+services:
+  secret-quant-bot:
+    build: .
+    container_name: secret_quant_masterclass_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
