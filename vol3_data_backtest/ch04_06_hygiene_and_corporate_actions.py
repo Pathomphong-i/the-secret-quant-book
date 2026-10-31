@@ -450,6 +450,7 @@ def run_rolling_walk_forward(
     candidate_windows: list[int],
     is_bars: int = 500,
     oos_bars: int = 125,
+    min_is_ann_ret: float = 0.02,
 ) -> tuple[pd.DataFrame, float]:
     ret_series = close_series.pct_change().fillna(0.0)
     records = []
@@ -470,13 +471,21 @@ def run_rolling_walk_forward(
         oos_slice_ret = float(
             (sig_best.iloc[is_end:oos_end] * ret_series.iloc[is_end:oos_end]).mean() * 245
         )
-        wfe = (oos_slice_ret / best_is_ret * 100.0) if best_is_ret > 0 else 0.0
+        # ป้องกันกรณี IS <= 0 หรือใกล้ศูนย์ (เช่น < 2% ต่อปี) ไม่ให้เกิดตัวหารติดลบหรือระเบิดค่าเทียม
+        if best_is_ret < min_is_ann_ret:
+            wfe = 0.0
+            window_status = "INVALID_IS_EDGE"
+        else:
+            wfe = max(-100.0, min(200.0, (oos_slice_ret / best_is_ret) * 100.0))
+            window_status = "VALID"
+
         records.append({
             "window_start": int(start_idx),
             "best_lookback": int(best_w),
             "is_ann_ret_pct": round(best_is_ret * 100, 2),
             "oos_ann_ret_pct": round(oos_slice_ret * 100, 2),
             "wfe_pct": round(wfe, 1),
+            "wfe_status": window_status,
         })
         start_idx += oos_bars
 

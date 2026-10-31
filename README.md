@@ -118,6 +118,30 @@ pip install -r requirements.txt
 python3 run_master_8vol_pipeline.py
 ```
 
+### 3. รันสคริปต์ตรวจสอบผลทดสอบย้อนหลังและตารางจำลองเชิงสาธิต (Benchmark & Ablation Reproducibility)
+```bash
+python3 reproduce_benchmarks.py
+```
+*หมายเหตุความโปร่งใส:* สคริปต์ `reproduce_benchmarks.py` แยกผลลัพธ์ออกเป็น **ตารางที่ ข.1** (ผลทดสอบเปรียบเทียบโครงสร้างพื้นฐาน Core Engine เล่ม 1–2 และ เล่ม 1–8 บนชุดข้อมูลตัวอย่าง หักค่าคอมมิชชั่น 0.157%/ขา และ Slippage) และ **ตารางที่ ข.2** (ผลจำลองเชิงสาธิตภายใต้สมมติฐานควบคุม — Controlled Synthetic Ablation Studies ประจำเล่มที่ 3–8 เพื่อแสดงผลกระทบส่วนเพิ่มของแต่ละโมดูลด้วย Deterministic Seed = 2026)
+
+### 4. รันชุดทดสอบความถูกต้องทางคณิตศาสตร์และวิศวกรรม (Automated Audit Test Suite)
+```bash
+python3 -m unittest discover -s tests -p "test_*.py" -v
+```
+ครอบคลุมการตรวจสอบกรณีขอบเขตสำคัญ (Edge Cases): การจัดเวลาข่าว Point-in-Time ข้ามวันหยุดและช่วงพักเที่ยง, การกวาดยกเลิกออเดอร์ค้างของ Kill-Switch ระดับ 3, การป้องกันตัวหารติดลบในค่า WFE, การกรองจำนวนแท่งเทียนขั้นต่ำของ RS Score และการรับมือกระดานว่าง (Ceiling/Floor) ในการคำนวณ OBI
+
+### 3. รันสคริปต์ตรวจสอบผลทดสอบย้อนหลังและตารางจำลองเชิงสาธิต (Benchmark & Ablation Reproducibility)
+```bash
+python3 reproduce_benchmarks.py
+```
+*หมายเหตุความโปร่งใส:* สคริปต์ `reproduce_benchmarks.py` แยกผลลัพธ์ออกเป็น **ตารางที่ ข.1** (ผลทดสอบเปรียบเทียบโครงสร้างพื้นฐาน Core Engine เล่ม 1–2 และ เล่ม 1–8 บนชุดข้อมูลตัวอย่าง หักค่าคอมมิชชั่น 0.157%/ขา และ Slippage) และ **ตารางที่ ข.2** (ผลจำลองเชิงสาธิตภายใต้สมมติฐานควบคุม — Controlled Synthetic Ablation Studies ประจำเล่มที่ 3–8 เพื่อแสดงผลกระทบส่วนเพิ่มของแต่ละโมดูลด้วย Deterministic Seed = 2026)
+
+### 4. รันชุดทดสอบความถูกต้องทางคณิตศาสตร์และวิศวกรรม (Automated Audit Test Suite)
+```bash
+python3 -m unittest discover -s tests -p "test_*.py" -v
+```
+ครอบคลุมการตรวจสอบกรณีขอบเขตสำคัญ (Edge Cases): การจัดเวลาข่าว Point-in-Time ข้ามวันหยุดและช่วงพักเที่ยง, การกวาดยกเลิกออเดอร์ค้างของ Kill-Switch ระดับ 3, การป้องกันตัวหารติดลบในค่า WFE, การกรองจำนวนแท่งเทียนขั้นต่ำของ RS Score และการรับมือกระดานว่าง (Ceiling/Floor) ในการคำนวณ OBI
+
 ### 3. รันทดสอบแยกตามเล่ม (Volumes 1–8)
 ```bash
 # เล่มที่ 1–2: บอท 4 เสาหลักครบ 6 บทหลัก (14 หัวข้อ)

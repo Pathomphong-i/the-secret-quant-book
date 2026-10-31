@@ -91,28 +91,47 @@ import numpy as np
 import pandas as pd
 
 def rank_cross_sectional_rs(
-    stock_prices: pd.DataFrame, benchmark_price: pd.Series
+    stock_prices: pd.DataFrame,
+    benchmark_price: pd.Series,
+    min_valid_bars: int = 120,
+    min_universe_size: int = 10,
 ) -> pd.DataFrame:
-    """คำนวณและจัดอันดับ Risk-Adjusted Relative Strength (20d, 60d, 120d)"""
-    daily_ret = stock_prices.pct_change()
+    """คำนวณและจัดอันดับ Risk-Adjusted Relative Strength (20d, 60d, 120d) พร้อมกรองจำนวนแท่งขั้นต่ำ"""
+    valid_counts = stock_prices.notna().sum()
+    eligible_cols = valid_counts[valid_counts >= min_valid_bars].index
+    filtered_prices = stock_prices[eligible_cols]
+    if filtered_prices.empty:
+        return pd.DataFrame(columns=["ret_20d_%", "composite_rs", "rs_rating", "valid_bars", "is_statistically_valid_universe"])
+
+    daily_ret = filtered_prices.pct_change(fill_method=None)
     horizons = {20: 0.50, 60: 0.30, 120: 0.20}
-    composite_score = pd.Series(0.0, index=stock_prices.columns)
-    
+    composite_score = pd.Series(0.0, index=filtered_prices.columns)
+    valid_weight_sum = pd.Series(0.0, index=filtered_prices.columns)
+
     for h, weight in horizons.items():
-        stock_ret_h = stock_prices.iloc[-1] / stock_prices.iloc[-h] - 1.0
+        if len(filtered_prices) < h or len(benchmark_price.dropna()) < h:
+            continue
+        stock_ret_h = filtered_prices.iloc[-1] / filtered_prices.iloc[-h] - 1.0
         bench_ret_h = benchmark_price.iloc[-1] / benchmark_price.iloc[-h] - 1.0
         excess_ret = stock_ret_h - bench_ret_h
-        
+
         vol_h = daily_ret.tail(h).std() * np.sqrt(h)
         rs_h = excess_ret / vol_h.replace(0, np.nan)
-        composite_score += weight * rs_h.fillna(0.0)
-        
+        valid_mask = rs_h.notna()
+        composite_score[valid_mask] += weight * rs_h[valid_mask]
+        valid_weight_sum[valid_mask] += weight
+
+    composite_score = composite_score / valid_weight_sum.replace(0, np.nan)
     rs_percentile = (composite_score.rank(pct=True) * 100.0).round(1)
+    is_valid_univ = len(eligible_cols) >= min_universe_size
+
     result = pd.DataFrame({
-        "ret_20d_%": ((stock_prices.iloc[-1] / stock_prices.iloc[-20] - 1) * 100).round(2),
+        "ret_20d_%": ((filtered_prices.iloc[-1] / filtered_prices.iloc[-20] - 1) * 100).round(2),
         "composite_rs": composite_score.round(3),
-        "rs_rating": rs_percentile
-    }).sort_values(by="rs_rating", ascending=False)
+        "rs_rating": rs_percentile,
+        "valid_bars": valid_counts[eligible_cols].astype(int),
+        "is_statistically_valid_universe": is_valid_univ,
+    }).dropna(subset=["composite_rs"]).sort_values(by="rs_rating", ascending=False)
     return result
 
 if __name__ == "__main__":

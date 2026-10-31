@@ -100,10 +100,12 @@ def trigger_three_tier_circuit_breaker(
     peak_drawdown_pct: float,
     consecutive_api_errors: int,
     data_age_seconds: float,
+    open_order_ids: list[str] | None = None,
     manual_kill_active: bool = False,
 ) -> dict[str, Any]:
-    """ประเมินระบบตัดไฟฉุกเฉิน 3 ระดับ (3-Tier Circuit Breaker) และปุ่มหยุดฉุกเฉิน"""
+    """ประเมินระบบตัดไฟฉุกเฉิน 3 ระดับ พร้อมสั่งยกเลิกออเดอร์ค้างทั้งหมดเมื่อเข้าสู่ระดับ 3"""
     reasons: list[str] = []
+    pending_orders = list(open_order_ids or [])
     tier = 0
 
     # ตรวจสอบเงื่อนไขวิกฤตระดับ 3 (Hard Kill-Switch)
@@ -121,21 +123,29 @@ def trigger_three_tier_circuit_breaker(
         tier = max(tier, 1); reasons.append(f"TECH_ANOMALY (Err:{consecutive_api_errors}, DataAge:{data_age_seconds}s)")
 
     config = {
-        0: ("NORMAL_OPERATION", 1.0, False, True),
-        1: ("LEVEL_1_PAUSE_NEW_BUYS", 0.0, False, True),
-        2: ("LEVEL_2_THROTTLE_50PCT", 0.5, False, True),
-        3: ("LEVEL_3_HARD_KILL_SWITCH", 0.0, True, False),
+        0: ("NORMAL_OPERATION", 1.0, False, True, "MAINTAIN_ACTIVE_PORTFOLIO"),
+        1: ("LEVEL_1_PAUSE_NEW_BUYS", 0.0, False, True, "HOLD_EXISTING_ALLOW_STOP_EXITS"),
+        2: ("LEVEL_2_THROTTLE_50PCT", 0.5, False, True, "REDUCE_NEW_SIZING_ALLOW_STOP_EXITS"),
+        3: ("LEVEL_3_HARD_KILL_SWITCH", 0.0, True, False, "HOLD_EXISTING_WITH_HARD_STOPS_AND_HALT_NEW_ENTRIES"),
     }[tier]
 
+    cancelled_orders = pending_orders if config[2] else []
+
     return {
-        "tier": tier, "mode": config[0], "buy_size_multiplier": config[1],
-        "cancel_all_open_orders": config[2], "allow_sell_exits": config[3],
+        "tier": tier,
+        "mode": config[0],
+        "buy_size_multiplier": config[1],
+        "cancel_all_open_orders": config[2],
+        "cancelled_order_ids": cancelled_orders,
+        "allow_Automated_new_orders": config[1] > 0,
+        "allow_protective_stop_exits": config[3],
+        "portfolio_state_action": config[4],
         "triggers": reasons or ["ALL_SYSTEMS_NOMINAL"],
     }
 
-# ทดสอบสถานการณ์: ขาดทุนระหว่างวัน -2.8% (ระดับ 2) เทียบกับกรณีเกิด API Error รัว 5 ครั้งติด (ระดับ 3)
-print("Case A (Drawdown -2.8%):", trigger_three_tier_circuit_breaker(-2.8, -6.5, 0, 12.0))
-print("Case B (API Error 5x):  ", trigger_three_tier_circuit_breaker(-0.5, -3.0, 5, 10.0))
+# ทดสอบสถานการณ์: ขาดทุนระหว่างวัน -2.8% (ระดับ 2) เทียบกับกรณีเกิด API Error รัว 5 ครั้งติดพร้อมออเดอร์ค้าง (ระดับ 3)
+print("Case A (Drawdown -2.8%):", trigger_three_tier_circuit_breaker(-2.8, -6.5, 0, 12.0, ["ORD-101"]))
+print("Case B (API Error 5x):  ", trigger_three_tier_circuit_breaker(-0.5, -3.0, 5, 10.0, ["ORD-101", "ORD-102"]))
 
 
 # ==============================================================================

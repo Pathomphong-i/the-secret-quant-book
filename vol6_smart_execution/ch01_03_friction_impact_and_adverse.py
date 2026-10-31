@@ -143,18 +143,37 @@ def compute_multilevel_obi(
     bid_volumes: List[int],
     ask_volumes: List[int],
     decay_lambda: float = 0.5,
+    expected_levels: int = 5,
 ) -> Dict[str, object]:
-    """คำนวณ Level-1 OBI และ Distance-Weighted 5-Level OBI"""
-    weights = [math.exp(-decay_lambda * i) for i in range(len(bid_volumes))]
+    """คำนวณ Level-1 OBI และ Distance-Weighted Multi-Level OBI พร้อมป้องกันกระดานว่างหรือมีไม่ครบช่อง"""
+    clean_bids = [max(0, int(v)) for v in (bid_volumes or [])]
+    clean_asks = [max(0, int(v)) for v in (ask_volumes or [])]
 
-    # Level-1 OBI (เฉพาะช่องหน้าสุด)
-    b1, a1 = bid_volumes[0], ask_volumes[0]
-    obi_l1 = (b1 - a1) / max(b1 + a1, 1)
+    # กรณีกระดานว่างเปล่าข้างใดข้างหนึ่ง (เช่น ชน Ceiling/Floor หรือช่วง Halted)
+    if not clean_bids or not clean_asks or (sum(clean_bids) == 0 and sum(clean_asks) == 0):
+        return {
+            "obi_level1": 0.0,
+            "obi_weighted_5level": 0.0,
+            "valid_levels_used": 0,
+            "is_thin_book_warning": True,
+            "book_pressure_state": "EMPTY_OR_LOCKED_BOOK (กระดานว่างหรือชน Ceiling/Floor — ห้ามส่งคำสั่ง)",
+        }
 
-    # Multi-Level Weighted OBI (ถ่วงน้ำหนัก 5 ช่อง)
-    w_bid = sum(w * v for w, v in zip(weights, bid_volumes))
-    w_ask = sum(w * v for w, v in zip(weights, ask_volumes))
-    obi_multi = (w_bid - w_ask) / max(w_bid + w_ask, 1e-9)
+    # ปรับจำนวนระดับที่ใช้คำนวณตามจำนวนช่องที่มีข้อมูลจริง (หรือเติม 0 ให้ครบ expected_levels)
+    n_levels = max(len(clean_bids), len(clean_asks), expected_levels)
+    padded_bids = clean_bids + [0] * (n_levels - len(clean_bids))
+    padded_asks = clean_asks + [0] * (n_levels - len(clean_asks))
+    weights = [math.exp(-decay_lambda * i) for i in range(n_levels)]
+
+    b1, a1 = padded_bids[0], padded_asks[0]
+    obi_l1 = (b1 - a1) / (b1 + a1) if (b1 + a1) > 0 else 0.0
+
+    w_bid = sum(w * v for w, v in zip(weights, padded_bids))
+    w_ask = sum(w * v for w, v in zip(weights, padded_asks))
+    obi_multi = (w_bid - w_ask) / (w_bid + w_ask) if (w_bid + w_ask) > 0 else 0.0
+
+    valid_levels = min(len(clean_bids), len(clean_asks))
+    is_thin_book = valid_levels < expected_levels
 
     if obi_l1 > 0.35 and obi_multi > 0.25:
         pressure = "STRONG_BUY_PRESSURE (แรงรับหนุนแน่น เตรียมเคาะขวาได้)"
@@ -166,6 +185,8 @@ def compute_multilevel_obi(
     return {
         "obi_level1": round(obi_l1, 4),
         "obi_weighted_5level": round(obi_multi, 4),
+        "valid_levels_used": valid_levels,
+        "is_thin_book_warning": is_thin_book,
         "book_pressure_state": pressure,
     }
 

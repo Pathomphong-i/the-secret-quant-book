@@ -95,42 +95,88 @@ print(detect_sell_on_fact_divergence(0.82, 120_000, 310_000, 24.60, 25.10))
 # ==============================================================================
 
 import re
-from datetime import datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any, Dict
+from zoneinfo import ZoneInfo
+
+BKK_TZ = ZoneInfo("Asia/Bangkok")
+
+
+def _next_set_trading_day(d: date, holidays: set[str]) -> date:
+    """เลื่อนไปหาวันทำการถัดไปของตลาดหลักทรัพย์ฯ (ข้ามเสาร์-อาทิตย์ และวันหยุดนักขัตฤกษ์)"""
+    cur = d
+    while cur.weekday() >= 5 or cur.isoformat() in holidays:
+        cur += timedelta(days=1)
+    return cur
 
 
 def sanitize_pit_news_prompt(
     raw_text: str,
     pub_timestamp: str,
     tickers_to_mask: list[str],
+    received_timestamp: str | None = None,
+    set_holidays: set[str] | None = None,
 ) -> Dict[str, Any]:
-    """Anonymize entities/years to prevent LLM leakage and align PIT session."""
+    """Anonymize entities/years and align PIT session using available_at, Asia/Bangkok TZ & SET calendar."""
+    holidays = set_holidays or set()
     sanitized = raw_text
     for idx, ticker in enumerate(tickers_to_mask, start=1):
         pattern = re.compile(rf"\b{re.escape(ticker)}\b", re.IGNORECASE)
         sanitized = pattern.sub(f"[ENTITY_{idx}]", sanitized)
 
-    # Mask 4-digit years (e.g., 2020-2029 or 2563-2572) to block time memory
+    # Mask 4-digit years (e.g., 2020-2029 or 2563-2572) to reduce direct date memorization
     sanitized = re.sub(r"\b(20\d{2}|25\d{2})\b", "[YEAR]", sanitized)
 
-    dt = datetime.fromisoformat(pub_timestamp)
-    pub_time = dt.time()
-    if pub_time < time(9, 55):
-        session = f"{dt.date()}_MORNING_OPEN"
-    elif pub_time <= time(16, 25):
-        session = f"{dt.date()}_INTRADAY_NEXT_BAR"
+    pub_dt = datetime.fromisoformat(pub_timestamp)
+    if pub_dt.tzinfo is None:
+        pub_dt = pub_dt.replace(tzinfo=BKK_TZ)
     else:
-        session = f"{dt.date()}_NEXT_TRADING_DAY_OPEN"
+        pub_dt = pub_dt.astimezone(BKK_TZ)
+
+    if received_timestamp:
+        rec_dt = datetime.fromisoformat(received_timestamp)
+        rec_dt = rec_dt.replace(tzinfo=BKK_TZ) if rec_dt.tzinfo is None else rec_dt.astimezone(BKK_TZ)
+        avail_dt = max(pub_dt, rec_dt)
+    else:
+        avail_dt = pub_dt
+
+    avail_date = avail_dt.date()
+    avail_time = avail_dt.time()
+    is_trading_day = (avail_date.weekday() < 5) and (avail_date.isoformat() not in holidays)
+
+    if not is_trading_day:
+        next_day = _next_set_trading_day(avail_date + timedelta(days=1), holidays)
+        session = f"{next_day.isoformat()}_MORNING_ATO_OPEN"
+    elif avail_time < time(9, 55):
+        session = f"{avail_date.isoformat()}_MORNING_ATO_OPEN"
+    elif avail_time <= time(12, 30):
+        session = f"{avail_date.isoformat()}_MORNING_INTRADAY_NEXT_BAR"
+    elif avail_time < time(14, 25):
+        session = f"{avail_date.isoformat()}_AFTERNOON_ATO2_OPEN"
+    elif avail_time <= time(16, 25):
+        session = f"{avail_date.isoformat()}_AFTERNOON_INTRADAY_NEXT_BAR"
+    else:
+        next_day = _next_set_trading_day(avail_date + timedelta(days=1), holidays)
+        session = f"{next_day.isoformat()}_MORNING_ATO_OPEN"
 
     return {
-        "published_at": pub_timestamp,
+        "published_at": pub_dt.isoformat(),
+        "available_at": avail_dt.isoformat(),
         "effective_trade_session": session,
         "sanitized_prompt_text": sanitized,
     }
 
 
 sample_news = "In 2023, DELTA announced Q3 revenue expansion of 22% YoY."
-print(sanitize_pit_news_prompt(sample_news, "2023-10-25T17:40:00", ["DELTA"]))
+print(
+    sanitize_pit_news_prompt(
+        sample_news,
+        pub_timestamp="2023-10-20T17:40:00+07:00",
+        tickers_to_mask=["DELTA"],
+        received_timestamp="2023-10-20T17:42:15+07:00",
+        set_holidays={"2023-10-23"},  # วันปิยมหาราช (วันจันทร์หยุด -> เลื่อนไปอังคาร 24 ต.ค.)
+    )
+)
 
 
 # ==============================================================================
