@@ -61,3 +61,81 @@ python3 full_bot/the_secret_quant_full_bot.py --csv data/sample_thai_stocks_ohlc
 python3 chapters_combined/01_ch01_to_ch04_four_pillars_bot.py
 python3 chapters_by_script/script_03_ch05_point_in_time_backtest.py
 ```
+
+---
+
+## 📊 ผลลัพธ์การรันทดสอบบอทตัวเต็ม (`the_secret_quant_full_bot.py` + `sample_thai_stocks_ohlcv.csv`)
+
+เมื่อรันคำสั่ง `python3 full_bot/the_secret_quant_full_bot.py --csv data/sample_thai_stocks_ohlcv.csv` ระบบจะจำลองการเทรดแบบ **Point-in-Time Event-Driven Backtest** (คำนวณสัญญาณ ณ สิ้นวัน `T-1` และส่งคำสั่งซื้อขายที่ราคาเปิดวัน `T` พร้อมหักค่าธรรมเนียม `0.157%` และ `Slippage`) บนข้อมูลจำลอง 500 วันทำการ (6 หลักทรัพย์ตัวแทนกลุ่มอุตสาหกรรม + ดัชนีตลาด `SET_INDEX`):
+
+### สรุปตัวชี้วัดหลักจากการทดสอบ (Key Performance Metrics)
+
+| ตัวชี้วัด (Metric) | ผลลัพธ์จากการรันทดสอบ | คำอธิบาย |
+| :--- | :---: | :--- |
+| **เงินทุนตั้งต้น (`Initial Capital`)** | `1,000,000.00 บาท` | พอร์ตเริ่มต้นสำหรับการทดสอบระบบ |
+| **พอร์ตเทรดปลายงวด (`Trading Equity`)** | `1,144,359.36 บาท` | มูลค่าพอร์ตส่วนเก็งกำไรเชิงระบบ (Bucket #1) |
+| **ถังเงินออมปลอดภัย (`Safe Bucket Skim`)** | `7,803.58 บาท` | กำไรที่ถูกดูดออกไปล็อกเก็บในถังปลอดภัยอัตโนมัติ (Bucket #2) |
+| **ความมั่งคั่งสุทธิรวม (`Total Wealth`)** | **`1,152,162.94 บาท` (`+15.22%`)** | มูลค่ารวมสุทธิหลังหักค่าคอมมิชชัน VAT และ Slippage ครบทุกไม้ |
+| **ผลตอบแทนทบต้นต่อปี (`CAGR`)** | **`+8.45% ต่อปี`** | อัตราการเติบโตทบต้นต่อปี |
+| **การย่อตัวสูงสุด (`Max Drawdown`)** | **`-4.22%`** | ควบคุม Drawdown ให้อยู่ต่ำกว่าเพดานความเสี่ยง `-5.0%` ด้วย `ATR Sizing` + `HRP` + `Cash Shield` |
+| **Sharpe Ratio / Sortino Ratio** | **`1.98` / `3.21`** | ผลตอบแทนเทียบความผันผวนอยู่ในเกณฑ์เสถียรสูง |
+| **อัตราชนะ (`Win Rate`) & `Profit Factor`** | **`56.86%` (51 ไม้) / `PF 1.62`** | ค่าคาดหวังสุทธิ (`Expectancy`) เฉลี่ย **`+1,324.44 บาท/ไม้`** |
+| **Walk-Forward Efficiency (`WFE`)** | **`233.5%` (ผ่านเกณฑ์ `>= 50%`)** | ช่วงทดสอบนอกกลุ่มตัวอย่าง (`Out-of-Sample CAGR 12.00%`) ไม่เกิดอาการ Overfitting |
+
+### ตัวอย่างผลลัพธ์บนหน้าจอ Terminal จริง (Full Terminal Output)
+
+```text
+============================================================================================
+  โรบอทเทรด ที่โบรกเกอร์ไม่อยากให้คุณเขียน — เปิดแก่นความคิดของ Quant Trader ยุคใหม่ (CH 1 - CH 14)
+============================================================================================
+[1/6] โหลดข้อมูลราคาหุ้นย้อนหลังจากไฟล์: data/sample_thai_stocks_ohlcv.csv
+      - จำนวนหุ้นที่ผ่านเกณฑ์ความสะอาด (Data Hygiene): 6 ตัว (STOCK_BANK.BK, STOCK_COMM.BK, STOCK_ENERG.BK, STOCK_HELTH.BK, STOCK_ICT.BK, STOCK_TRANS.BK)
+      - ช่วงเวลาทดสอบ: 2023-01-03 ถึง 2024-12-02 (500 วันทำการ)
+
+[2/6] ผลการจำแนกสภาวะตลาดรวม (Market Regime Detector - บทที่ 10):
+      - BULL_TREND      : 298 วันทำการ ( 59.6%)
+      - SIDEWAYS_QUIET  : 100 วันทำการ ( 20.0%)
+      - CRISIS_PANIC    : 102 วันทำการ ( 20.4%)
+
+[3/6] สัดส่วนพอร์ตไร้ความเสี่ยงกระจุกตัว (Hierarchical Risk Parity - บทที่ 12):
+      - STOCK_HELTH.BK: 28.66%
+      - STOCK_ICT.BK: 24.40%
+      - STOCK_ENERG.BK: 16.93%
+      - STOCK_COMM.BK: 12.58%
+      - STOCK_BANK.BK: 10.48%
+      - STOCK_TRANS.BK:  6.95%
+
+[4/6] ผลทดสอบ Walk-Forward Validation (บทที่ 6):
+      - In-Sample CAGR (60% แรก)     :   5.14% ต่อปี
+      - Out-of-Sample CAGR (40% หลัง):  12.00% ต่อปี
+      - Walk-Forward Efficiency (WFE):  233.5% -> [ผ่านเกณฑ์มาตรฐาน (Robust >= 50%)]
+
+[5/6] สรุปผลการจำลองพอร์ตเต็มรูปแบบ (Point-in-Time Backtest & Two-Bucket System):
+      - เงินทุนตั้งต้น (Initial Capital)       :   1,000,000.00 บาท
+      - พอร์ตเทรดปลายงวด (Trading Equity)    :   1,144,359.36 บาท
+      - ถังเงินออมปลอดภัย (Safe Bucket Skim) :       7,803.58 บาท
+      - ความมั่งคั่งสุทธิรวม (Total Wealth)   :   1,152,162.94 บาท
+      - ผลตอบแทนสุทธิรวม (Total Return)      :         15.22%
+      - ผลตอบแทนทบต้นต่อปี (CAGR)            :          8.45%
+      - การย่อตัวสูงสุด (Max Drawdown)       :         -4.22%
+      - Sharpe Ratio / Sortino Ratio        :   1.98 / 3.21
+      - จำนวนไม้ที่เทรดทั้งหมด (Total Trades) :             51 ไม้
+      - อัตราชนะ (Win Rate)                 :         56.86%
+      - Profit Factor                       :           1.62
+      - ค่าคาดหวังต่อไม้ (Expectancy)        :       1,324.44 บาท/ไม้
+
+      ตัวอย่างประวัติการเทรด 5 ไม้ล่าสุด (พร้อม Thesis Tag & Ratchet Stop):
+      * STOCK_ENERG.BK [MEAN_REVERSION ] 2024-10-16 @  32.94 -> 2024-10-22 @  33.69 | PnL: +3,768.70 บาท (+0.51R) | MEAN_REVERT_TARGET (ราคาดีดกลับแตะค่าเฉลี่ย SMA 20 / RSI >= 65)
+      * STOCK_COMM.BK [MEAN_REVERSION ] 2024-10-25 @  98.18 -> 2024-10-28 @  99.83 | PnL: +2,145.79 บาท (+0.39R) | MEAN_REVERT_TARGET (ราคาดีดกลับแตะค่าเฉลี่ย SMA 20 / RSI >= 65)
+      * STOCK_ICT.BK [TREND_FOLLOWING] 2024-06-12 @ 200.15 -> 2024-11-01 @ 225.11 | PnL: +21,867.34 บาท (+2.14R) | TRAILING_STOP_HIT (PROFIT_RATCHETED (+3R))
+      * STOCK_BANK.BK [MEAN_REVERSION ] 2024-10-14 @ 141.24 -> 2024-11-01 @ 133.18 | PnL: -9,344.77 บาท (-1.17R) | TRAILING_STOP_HIT (INITIAL)
+      * STOCK_ICT.BK [MEAN_REVERSION ] 2024-11-01 @ 225.57 -> 2024-11-07 @ 233.34 | PnL: +6,345.55 บาท (+0.87R) | MEAN_REVERT_TARGET (ราคาดีดกลับแตะค่าเฉลี่ย SMA 20 / RSI >= 65)
+
+[6/6] ตัวอย่างแผนส่งคำสั่งซื้ออัจฉริยะ (Smart TWAP & Micro-Price - บทที่ 13 & 14) สำหรับ STOCK_BANK.BK:
+      - ราคาอ้างอิง: 138.83 บาท | Spread: 72.2 bps | OBI: +0.339 | Micro-Price: 138.669 บาท
+      - ไม้ย่อยที่ 1 (+00m:46s): จำนวน  600 หุ้น @ Limit 139.00 บาท [JOIN_BEST_ASK]
+      - ไม้ย่อยที่ 2 (+05m:34s): จำนวน  600 หุ้น @ Limit 139.00 บาท [JOIN_BEST_ASK]
+      - ไม้ย่อยที่ 3 (+10m:36s): จำนวน  600 หุ้น @ Limit 139.00 บาท [JOIN_BEST_ASK]
+      - ไม้ย่อยที่ 4 (+15m:44s): จำนวน  600 หุ้น @ Limit 139.00 บาท [JOIN_BEST_ASK]
+========================================================================================
+```
