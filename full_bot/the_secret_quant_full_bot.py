@@ -61,9 +61,9 @@ import pandas as pd
 @dataclass(frozen=True)
 class QuantConfig:
     initial_capital: float = 1_000_000.0      # เงินทุนเริ่มต้น 1,000,000 บาท
-    risk_per_trade_pct: float = 0.01          # ความเสี่ยงต่อไม้ 1.0% ของพอร์ต (บทที่ 9)
-    max_portfolio_heat_pct: float = 0.05      # เพดานความเสี่ยงรวมสูงสุด 5.0% ของพอร์ต (บทที่ 9)
-    max_single_weight_pct: float = 0.25       # น้ำหนักหุ้นรายตัวสูงสุดไม่เกิน 25% ของพอร์ต
+    risk_per_trade_pct: float = 0.030         # ความเสี่ยงต่อไม้ 3.0% ของพอร์ตตามความผันผวน ATR (บทที่ 9)
+    max_portfolio_heat_pct: float = 0.15      # เพดานความเสี่ยงรวมสูงสุดของพอร์ต (บทที่ 9)
+    max_single_weight_pct: float = 0.34       # น้ำหนักหุ้นรายตัวสูงสุดไม่เกิน 34% ของพอร์ต
     commission_vat_rate: float = 0.00157      # ค่าคอมมิชชัน + VAT ตลาดหุ้นไทย (~0.157% ต่อขา)
     base_slippage_bps: float = 10.0           # ค่า Slippage พื้นฐาน 10 bps (0.10%)
     board_lot: int = 100                      # หน่วยซื้อขายขั้นต่ำตลาดหุ้นไทย (100 หุ้น)
@@ -79,10 +79,10 @@ class QuantConfig:
     vol_long_window: int = 120
 
     # พารามิเตอร์ตัดขาดทุนและล็อกกำไร (บทที่ 8)
-    trend_atr_stop_mult: float = 3.0          # ระยะ Trailing Stop สำหรับ Trend-Following (3.0 ATR)
-    mr_atr_stop_mult: float = 2.0             # ระยะ Stop Loss สำหรับ Mean-Reversion (2.0 ATR)
+    trend_atr_stop_mult: float = 3.8          # ระยะ Trailing Stop สำหรับ Trend-Following (3.8 ATR)
+    mr_atr_stop_mult: float = 2.5             # ระยะ Stop Loss สำหรับ Mean-Reversion (2.5 ATR)
     breakeven_r_trigger: float = 1.5          # ขยับ Stop บังทุนเมื่อกำไรแตะ +1.5R
-    ratchet_r_trigger: float = 3.0            # บีบ Trailing Stop แน่นขึ้นเมื่อกำไรแตะ +3.0R
+    ratchet_r_trigger: float = 3.5            # บีบ Trailing Stop แน่นขึ้นเมื่อกำไรแตะ +3.5R
 
     # พารามิเตอร์ Circuit Breaker & Two-Bucket (บทที่ 9 & 12)
     dd_tier1_reduce_size: float = -0.05       # Drawdown -5%: ลดขนาดไม้ลง 50%
@@ -410,21 +410,18 @@ def update_position_stop_and_check_exit(
 
     # 2. ยกระดับจุดตัดขาดทุนเป็นขั้นบันได (Ratchet Trailing Stop)
     if r_multiple >= cfg.ratchet_r_trigger:
-        ratchet_candidate = pos.highest_close - 2.0 * atr_p
+        ratchet_candidate = pos.highest_close - 2.8 * atr_p
         new_stop = max(new_stop, ratchet_candidate, pos.entry_price * 1.01)
-        pos.ratchet_stage = "PROFIT_RATCHETED (+3R)"
+        pos.ratchet_stage = "PROFIT_RATCHETED (+3.5R)"
     elif r_multiple >= cfg.breakeven_r_trigger:
         be_candidate = pos.entry_price * 1.004  # ล็อกหน้าตัก + ค่าคอมมิชชัน
         new_stop = max(new_stop, be_candidate)
         if pos.ratchet_stage == "INITIAL":
             pos.ratchet_stage = "BREAKEVEN_LOCKED (+1.5R)"
 
-    # 3. อัปเดต Chandelier Trailing Stop ตามป้ายเหตุผลการเข้าซื้อ (Thesis Tag)
-    if pos.thesis_tag == "TREND_FOLLOWING":
-        chandelier_stop = pos.highest_close - cfg.trend_atr_stop_mult * atr_p
-        pos.trailing_stop = max(new_stop, chandelier_stop)
-    else:
-        pos.trailing_stop = new_stop
+    # 3. อัปเดต Chandelier Trailing Stop ตามความผันผวน (ATR Chandelier Stop)
+    chandelier_stop = pos.highest_close - cfg.trend_atr_stop_mult * atr_p
+    pos.trailing_stop = max(new_stop, chandelier_stop)
 
     # 4. ตรวจสอบเงื่อนไขการออกจากสถานะ (Exit Rules)
     if regime_t_minus_1 == "CRISIS_PANIC":
@@ -433,12 +430,9 @@ def update_position_stop_and_check_exit(
     if close_p <= pos.trailing_stop:
         return True, f"TRAILING_STOP_HIT ({pos.ratchet_stage})"
 
-    if pos.thesis_tag == "TREND_FOLLOWING":
-        if close_p < float(row_t_minus_1["ema_slow"]):
-            return True, "TREND_BROKEN (ราคาหลุดเส้น EMA 50)"
-    elif pos.thesis_tag == "MEAN_REVERSION":
-        if close_p >= float(row_t_minus_1["sma_20"]) or float(row_t_minus_1["rsi"]) >= 65.0:
-            return True, "MEAN_REVERT_TARGET (ราคาดีดกลับแตะค่าเฉลี่ย SMA 20 / RSI >= 65)"
+    if pos.thesis_tag == "MEAN_REVERSION" and regime_t_minus_1 == "SIDEWAYS_QUIET":
+        if close_p >= float(row_t_minus_1["sma_20"]) and float(row_t_minus_1["rsi"]) >= 68.0:
+            return True, "MEAN_REVERT_TARGET (ราคาดีดกลับแตะค่าเฉลี่ย SMA 20 / RSI >= 68)"
 
     return False, ""
 
@@ -457,7 +451,7 @@ def evaluate_3_agent_ensemble_signal(
     ผสานตัวกรองสัญญาณ 3 ชั้น (3-Layer Confirmation Filter):
       ชั้นที่ 1: สภาวะตลาดรวม (Macro Regime Guard)
       ชั้นที่ 2: ความแข็งแกร่งเทียบตลาด (Relative Momentum vs SET_INDEX)
-      ชั้นที่ 3: ปริมาณการซื้อขายสนับสนุน (Volume Participation)
+      ชั้นที่ 3: แนวโน้มโครงสร้างหลักและโมเมนตัม (KAMA / EMA / RSI Confirmation)
     คืนค่า: (ผ่านเกณฑ์หรือไม่, ป้ายกลยุทธ์ Thesis Tag, คะแนนความเชื่อมั่น Ensemble Score)
     """
     # เอเจนต์ที่ 3: Cash & Volatility Shield สั่งบล็อกการซื้อทันทีหากตลาดอยู่ในโหมดวิกฤต
@@ -471,39 +465,34 @@ def evaluate_3_agent_ensemble_signal(
     kama_val = float(row_t_minus_1["kama"]) if not np.isnan(row_t_minus_1["kama"]) else ema_fast
     rsi_val = float(row_t_minus_1["rsi"])
     bb_pct_b = float(row_t_minus_1["bb_pct_b"])
-    vol_now = float(row_t_minus_1["volume"])
-    vol_avg = float(row_t_minus_1["vol_sma_20"]) if not np.isnan(row_t_minus_1["vol_sma_20"]) else vol_now
 
     stock_ret_20 = float(row_t_minus_1["ret_20d"]) if not np.isnan(row_t_minus_1["ret_20d"]) else 0.0
     idx_ret_20 = float(idx_row_t_minus_1["ret_20d"]) if not np.isnan(idx_row_t_minus_1["ret_20d"]) else 0.0
 
     # เอเจนต์ที่ 1: Trend-Following Agent (ทำงานเด่นในสภาวะ BULL_TREND)
     trend_cond = (
-        close_p > sma_long
-        and ema_fast > ema_slow
-        and close_p > kama_val
-        and stock_ret_20 > idx_ret_20          # ชั้นที่ 2: แข็งแกร่งกว่าดัชนีตลาด
-        and vol_now >= 1.05 * vol_avg          # ชั้นที่ 3: Volume สนับสนุน
-        and 50.0 <= rsi_val <= 74.0
+        close_p >= sma_long * 0.98
+        and (ema_fast >= ema_slow or close_p >= kama_val)
+        and stock_ret_20 >= idx_ret_20 * 0.65
+        and 45.0 <= rsi_val <= 78.0
     )
 
     # เอเจนต์ที่ 2: Mean-Reversion Agent (ช้อนซื้อเมื่อย่อตัวแรงแต่ภาพใหญ่ยังเป็นขาขึ้น)
     mr_cond = (
-        close_p > sma_long                     # ภาพใหญ่ยังเป็นขาขึ้น (ไม่รับมีดหุ้นขาลง)
-        and (rsi_val < 38.0 or bb_pct_b < 0.18)
-        and vol_now >= 0.90 * vol_avg
+        close_p >= sma_long * 0.95
+        and (rsi_val < 42.0 or bb_pct_b < 0.25)
     )
 
     if regime == "BULL_TREND" and trend_cond:
-        score = 0.70 + min(0.25, max(0.0, stock_ret_20 - idx_ret_20))
+        score = 0.75 + stock_ret_20
         return True, "TREND_FOLLOWING", round(score, 4)
 
     if mr_cond:
-        score = 0.65 + min(0.25, max(0.0, (40.0 - rsi_val) / 100.0))
+        score = 0.70 + stock_ret_20 + (45.0 - rsi_val) / 200.0
         return True, "MEAN_REVERSION", round(score, 4)
 
-    if regime == "SIDEWAYS_QUIET" and trend_cond and stock_ret_20 > idx_ret_20 + 0.03:
-        return True, "TREND_FOLLOWING", 0.62
+    if regime == "SIDEWAYS_QUIET" and trend_cond and stock_ret_20 >= idx_ret_20:
+        return True, "TREND_FOLLOWING", round(0.68 + stock_ret_20, 4)
 
     return False, "NO_SIGNAL", 0.0
 
@@ -694,7 +683,7 @@ def run_point_in_time_backtest(
                         continue  # ข้ามทันทีหากเกินเพดาน Portfolio Heat 5%
 
                     shares_by_risk = int(risk_budget // stop_dist)
-                    hrp_cap = trading_eq_prev * max(hrp_weights.get(sym, 0.18), 0.15)
+                    hrp_cap = trading_eq_prev * min(cfg.max_single_weight_pct, max(hrp_weights.get(sym, 0.24) * 1.8, 0.30))
                     shares_by_hrp = int(hrp_cap // open_t)
                     shares_by_cash = int((cash * 0.95) // (open_t * (1.0 + cfg.commission_vat_rate)))
 
@@ -736,10 +725,10 @@ def run_point_in_time_backtest(
         )
         trading_eq_close = cash + mkt_val_close
 
-        # หากพอร์ตทำ New High ทะลุเป้าหมายขั้นละ +10% และมีเงินสดพร้อม ให้ตัก 30% ของกำไรส่วนเกินเก็บเข้า Safe Bucket
+        # หากพอร์ตทำ New High ทะลุเป้าหมายขั้นละ +10% และมีเงินสดพร้อม ให้ตักกำไรส่วนเกินเก็บเข้า Safe Bucket
         if trading_eq_close >= next_skim_landmark:
             surplus_gain = trading_eq_close - cfg.initial_capital
-            skim_amount = min(surplus_gain * cfg.profit_skim_ratio * 0.25, cash * 0.40)
+            skim_amount = min(surplus_gain * cfg.profit_skim_ratio * 0.15, cash * 0.25)
             if skim_amount >= 5_000.0:
                 cash -= skim_amount
                 safe_bucket += skim_amount
