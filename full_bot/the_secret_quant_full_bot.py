@@ -963,6 +963,273 @@ def generate_smart_execution_plan(
     }
 
 
+def run_normal_generic_bot_backtest(
+    stock_map: Dict[str, pd.DataFrame],
+    idx_df: pd.DataFrame,
+    cfg: QuantConfig,
+    start_idx: int = 60,
+    end_idx: Optional[int] = None,
+) -> BacktestSummary:
+    """
+    จำลอง "บอททั่วไป (Normal Generic Indicator Bot)" เพื่อเปรียบเทียบกับบอทในหนังสือ:
+      - ใช้ค่าตั้งต้นตายตัว (ราคาปิดตัด SMA 20 หรือ RSI(14) < 35 ซื้อทันที)
+      - ไม่มีตัวกรองสภาวะตลาด (ไม่หยุดเทรดในตลาด Sideways / Crisis Panic)
+      - ไม่มี RVOL / CLV / KAMA Filter และไม่มี Context Tagging
+      - แบ่งเงินซื้อแบบหารเท่า (Fixed 22% ของพอร์ตต่อตัว) ไม่ปรับขนาดไม้ตาม ATR และไม่มี HRP
+      - ตั้งจุดขายทำกำไรสั้น +2.5% และตัดขาดทุนคงที่ -4.5% (ทำให้หมุนพอร์ตถี่และเสียค่าคอมมิชชัน+Slippage สะสม)
+    """
+    dates = list(idx_df.index)
+    if end_idx is None or end_idx > len(dates):
+        end_idx = len(dates)
+
+    cash = cfg.initial_capital
+    positions: Dict[str, Dict[str, object]] = {}
+    trades: List[TradeRecord] = []
+    equity_rows: List[Dict[str, object]] = []
+    symbols = sorted(stock_map.keys())
+    slip_rate = (cfg.base_slippage_bps * 1.4) / 10_000.0  # บอททั่วไปเคาะซื้อขายด้วย Market Order ทันที
+
+    for t in range(start_idx, end_idx):
+        dt_prev = dates[t - 1]
+        dt_now = dates[t]
+        regime_now = str(idx_df.loc[dt_now, "regime"])
+
+        # 1. ตรวจสอบการขายด้วยกฎคงที่ (+2.5% Take Profit / -4.5% Fixed Stop / หลุด SMA 20)
+        to_close: List[Tuple[str, str]] = []
+        for sym, pos in positions.items():
+            sdf = stock_map[sym]
+            if dt_prev not in sdf.index or dt_now not in sdf.index:
+                continue
+            close_prev = float(sdf.loc[dt_prev, "close"])
+            sma20_prev = float(sdf.loc[dt_prev, "sma_20"])
+            entry_p = float(pos["entry_price"])
+            ret_prev = (close_prev - entry_p) / entry_p
+            if ret_prev <= -0.045:
+                to_close.append((sym, "FIXED_STOP_LOSS (-4.5%)"))
+            elif ret_prev >= 0.025:
+                to_close.append((sym, "QUICK_TAKE_PROFIT (+2.5%)"))
+            elif close_prev < sma20_prev * 0.992:
+                to_close.append((sym, "WHIPSAW_BELOW_SMA20"))
+
+        for sym, reason in to_close:
+            pos = positions.pop(sym)
+            open_t = float(stock_map[sym].loc[dt_now, "open"])
+            exec_sell = open_t * (1.0 - slip_rate)
+            shares = int(pos["shares"])
+            entry_p = float(pos["entry_price"])
+            gross = exec_sell * shares
+            net_proceeds = gross * (1.0 - cfg.commission_vat_rate)
+            cash += net_proceeds
+            entry_cost = entry_p * shares * (1.0 + cfg.commission_vat_rate)
+            net_pnl = net_proceeds - entry_cost
+            ret_pct = (net_pnl / entry_cost) * 100.0
+            trades.append(
+                TradeRecord(
+                    symbol=sym,
+                    thesis_tag="GENERIC_SIGNAL",
+                    entry_date=str(pos["entry_date"]),
+                    exit_date=dt_now.strftime("%Y-%m-%d"),
+                    entry_price=round(entry_p, 2),
+                    exit_price=round(exec_sell, 2),
+                    shares=shares,
+                    net_pnl=round(net_pnl, 2),
+                    return_pct=round(ret_pct, 2),
+                    r_multiple=round(ret_pct / 4.5, 2),
+                    exit_reason=reason,
+                )
+            )
+
+        # 2. เปิดสถานะใหม่ทุกครั้งที่ราคา > SMA 20 หรือ RSI < 38 โดยไม่สนสภาวะตลาดรวม
+        mkt_val_prev = sum(
+            int(p["shares"]) * float(stock_map[s].loc[dt_prev, "close"])
+            for s, p in positions.items()
+            if dt_prev in stock_map[s].index
+        )
+        eq_prev = cash + mkt_val_prev
+        for sym in symbols:
+            if sym in positions or len(positions) >= 4:
+                continue
+            sdf = stock_map[sym]
+            if dt_prev not in sdf.index or dt_now not in sdf.index:
+                continue
+            row_prev = sdf.loc[dt_prev]
+            close_p = float(row_prev["close"])
+            sma20_p = float(row_prev["sma_20"])
+            rsi14_p = float(row_prev.get("rsi_14", 50.0))
+            if (close_p > sma20_p) or (rsi14_p < 38.0):
+                open_t = float(sdf.loc[dt_now, "open"])
+                exec_buy = open_t * (1.0 + slip_rate)
+                target_val = eq_prev * 0.22
+                shares = (int(min(target_val, cash * 0.95) // exec_buy) // 100) * 100
+                total_cost = shares * exec_buy * (1.0 + cfg.commission_vat_rate)
+                if shares >= 100 and total_cost <= cash:
+                    cash -= total_cost
+                    positions[sym] = {
+                        "entry_date": dt_now.strftime("%Y-%m-%d"),
+                        "entry_price": exec_buy,
+                        "shares": shares,
+                    }
+
+        mkt_val_now = sum(
+            int(p["shares"]) * float(stock_map[s].loc[dt_now, "close"])
+            for s, p in positions.items()
+            if dt_now in stock_map[s].index
+        )
+        total_eq = cash + mkt_val_now
+        equity_rows.append(
+            {
+                "date": dt_now.strftime("%Y-%m-%d"),
+                "regime": regime_now,
+                "trading_equity": round(total_eq, 2),
+                "safe_bucket": 0.0,
+                "combined_wealth": round(total_eq, 2),
+                "open_positions": len(positions),
+            }
+        )
+
+    eq_df = pd.DataFrame(equity_rows)
+    wealth = eq_df["combined_wealth"].astype(float)
+    daily_rets = wealth.pct_change().dropna()
+    n_years = max(len(eq_df) / 252.0, 1e-6)
+    total_ret = ((float(wealth.iloc[-1]) / cfg.initial_capital) - 1.0) * 100.0
+    cagr = (((float(wealth.iloc[-1]) / cfg.initial_capital) ** (1.0 / n_years)) - 1.0) * 100.0
+    peaks = wealth.cummax()
+    dd = ((wealth - peaks) / peaks) * 100.0
+    max_dd = float(dd.min())
+    ret_std = float(daily_rets.std())
+    sharpe = float((daily_rets.mean() / ret_std) * np.sqrt(252.0)) if ret_std > 1e-9 else 0.0
+    downside = daily_rets[daily_rets < 0.0]
+    down_std = float(downside.std()) if len(downside) > 1 else 1e-9
+    sortino = float((daily_rets.mean() / down_std) * np.sqrt(252.0)) if down_std > 1e-9 else 0.0
+
+    wins = [t.net_pnl for t in trades if t.net_pnl > 0]
+    losses = [t.net_pnl for t in trades if t.net_pnl <= 0]
+    win_rate = (len(wins) / len(trades) * 100.0) if trades else 0.0
+    pf = (sum(wins) / abs(sum(losses))) if losses and abs(sum(losses)) > 1e-9 else 0.0
+    exp_thb = float(np.mean([t.net_pnl for t in trades])) if trades else 0.0
+
+    return BacktestSummary(
+        equity_curve=eq_df,
+        trades=trades,
+        initial_capital=cfg.initial_capital,
+        final_trading_equity=round(float(wealth.iloc[-1]), 2),
+        safe_reserve_bucket=0.0,
+        total_combined_wealth=round(float(wealth.iloc[-1]), 2),
+        total_return_pct=round(total_ret, 2),
+        cagr_pct=round(cagr, 2),
+        max_drawdown_pct=round(max_dd, 2),
+        sharpe_ratio=round(sharpe, 2),
+        sortino_ratio=round(sortino, 2),
+        win_rate_pct=round(win_rate, 2),
+        profit_factor=round(pf, 2),
+        expectancy_thb=round(exp_thb, 2),
+    )
+
+
+def save_backtest_comparison_chart(
+    quant_summary: BacktestSummary,
+    normal_summary: BacktestSummary,
+    idx_df: pd.DataFrame,
+    out_path: str,
+) -> None:
+    """สร้างกราฟเปรียบเทียบผลลัพธ์ Backtest ระหว่าง The Secret Quant Bot vs Normal Bot vs Market Index"""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.dates as mdates
+        import matplotlib.ticker as mticker
+    except ImportError:
+        return
+
+    q_df = quant_summary.equity_curve.copy()
+    n_df = normal_summary.equity_curve.copy()
+    q_df["dt"] = pd.to_datetime(q_df["date"])
+    n_df["dt"] = pd.to_datetime(n_df["date"])
+    q_eq = q_df.set_index("dt")["combined_wealth"].astype(float)
+    n_eq = n_df.set_index("dt")["combined_wealth"].astype(float)
+    common_dates = q_eq.index
+    idx_slice = idx_df.loc[common_dates, "close"].astype(float)
+    bench_eq = (idx_slice / float(idx_slice.iloc[0])) * quant_summary.initial_capital
+
+    q_dd = ((q_eq - q_eq.cummax()) / q_eq.cummax()) * 100.0
+    n_dd = ((n_eq - n_eq.cummax()) / n_eq.cummax()) * 100.0
+    b_dd = ((bench_eq - bench_eq.cummax()) / bench_eq.cummax()) * 100.0
+
+    fig, (ax1, ax2) = plt.subplots(
+        2, 1, figsize=(11.5, 6.8), dpi=180, sharex=True, gridspec_kw={"height_ratios": [2.1, 1.0]}
+    )
+    fig.patch.set_facecolor("#ffffff")
+    for ax in (ax1, ax2):
+        ax.set_facecolor("#f8fafc")
+        ax.grid(True, linestyle="--", linewidth=0.6, color="#cbd5e1", alpha=0.7)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_color("#94a3b8")
+        ax.spines["bottom"].set_color("#94a3b8")
+
+    # Shade Crisis Panic periods in light rose
+    regimes = q_df.set_index("dt")["regime"]
+    in_crisis = False
+    start_dt = None
+    for dt, reg in regimes.items():
+        if reg == "CRISIS_PANIC" and not in_crisis:
+            in_crisis = True
+            start_dt = dt
+        elif reg != "CRISIS_PANIC" and in_crisis:
+            in_crisis = False
+            ax1.axvspan(start_dt, dt, color="#fecdd3", alpha=0.35, label="_nolegend_")
+            ax2.axvspan(start_dt, dt, color="#fecdd3", alpha=0.35, label="_nolegend_")
+    if in_crisis and start_dt is not None:
+        ax1.axvspan(start_dt, common_dates[-1], color="#fecdd3", alpha=0.35, label="_nolegend_")
+        ax2.axvspan(start_dt, common_dates[-1], color="#fecdd3", alpha=0.35, label="_nolegend_")
+
+    # Top Panel: Equity Curve (The Secret Quant Bot vs Normal Bot)
+    ax1.plot(
+        common_dates,
+        q_eq,
+        color="#059669",
+        linewidth=2.6,
+        label=f"The Secret Quant Bot (Adaptive 3-Agent + HRP + ATR + Cash Shield): {quant_summary.total_combined_wealth:,.0f} THB ({quant_summary.total_return_pct:+.2f}%, Sharpe {quant_summary.sharpe_ratio:.2f}, {len(quant_summary.trades)} trades)",
+    )
+    ax1.plot(
+        common_dates,
+        n_eq,
+        color="#e11d48",
+        linewidth=2.0,
+        label=f"Normal Bot (Generic SMA/RSI, No Regime Filter, Equal Weight): {normal_summary.total_combined_wealth:,.0f} THB ({normal_summary.total_return_pct:+.2f}%, Sharpe {normal_summary.sharpe_ratio:.2f}, {len(normal_summary.trades)} trades)",
+    )
+    ax1.fill_between(common_dates, q_eq, n_eq, where=(q_eq >= n_eq), color="#10b981", alpha=0.10, interpolate=True)
+    ax1.axhline(1_000_000, color="#475569", linewidth=0.9, linestyle=":")
+    ax1.set_title(
+        "Head-to-Head Backtest Comparison: The Secret Quant Bot vs. Normal Bot (500 Trading Days | 1,000,000 THB)",
+        fontsize=12.2,
+        fontweight="bold",
+        color="#0f172a",
+        pad=10,
+    )
+    ax1.set_ylabel("Portfolio Wealth (THB)", fontsize=10, fontweight="bold", color="#1e293b")
+    ax1.yaxis.set_major_formatter(mticker.StrMethodFormatter("{x:,.0f}"))
+    ax1.legend(loc="upper left", frameon=True, facecolor="#ffffff", edgecolor="#cbd5e1", fontsize=8.8)
+
+    # Bottom Panel: Drawdown (%)
+    ax2.fill_between(common_dates, q_dd, 0, color="#10b981", alpha=0.24)
+    ax2.plot(common_dates, q_dd, color="#059669", linewidth=1.8, label=f"The Secret Quant Bot Drawdown (Max: {quant_summary.max_drawdown_pct:.2f}%)")
+    ax2.fill_between(common_dates, n_dd, 0, color="#f43f5e", alpha=0.18)
+    ax2.plot(common_dates, n_dd, color="#e11d48", linewidth=1.6, label=f"Normal Bot Drawdown (Max: {normal_summary.max_drawdown_pct:.2f}%)")
+    ax2.axhline(-5.0, color="#d97706", linewidth=1.1, linestyle="--", label="-5.0% Max Portfolio Heat / Risk Guard")
+    ax2.set_ylabel("Drawdown (%)", fontsize=10, fontweight="bold", color="#1e293b")
+    ax2.set_xlabel("Trading Date (Pink shaded zones = CRISIS_PANIC Market Regime where Cash Shield protects capital)", fontsize=9.5, color="#334155")
+    ax2.yaxis.set_major_formatter(mticker.FormatStrFormatter("%.1f%%"))
+    ax2.legend(loc="lower left", frameon=True, facecolor="#ffffff", edgecolor="#cbd5e1", fontsize=8.5, ncol=3)
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    plt.savefig(out_path, dpi=180, bbox_inches="tight")
+    plt.close(fig)
+
+
 # =========================================================================================
 # 9. MAIN CLI RUNNER & REPORT GENERATOR
 # =========================================================================================
@@ -1027,21 +1294,27 @@ def main() -> None:
     print(f"      - Out-of-Sample CAGR (40% หลัง): {oos_cagr:>6.2f}% ต่อปี")
     print(f"      - Walk-Forward Efficiency (WFE): {wfe_pct:>6.1f}% -> [{wfe_status}]")
 
-    # รัน Backtest เต็มรูปแบบ (บทที่ 5, 7, 8, 9, 11, 12)
+    # รัน Backtest เต็มรูปแบบ (บทที่ 5, 7, 8, 9, 11, 12) และเปรียบเทียบกับบอททั่วไป (Normal Bot)
     summary = run_point_in_time_backtest(stock_map, idx_df, cfg, start_idx=60)
-    print("\n[5/6] สรุปผลการจำลองพอร์ตเต็มรูปแบบ (Point-in-Time Backtest & Two-Bucket System):")
-    print(f"      - เงินทุนตั้งต้น (Initial Capital)       : {summary.initial_capital:>14,.2f} บาท")
-    print(f"      - พอร์ตเทรดปลายงวด (Trading Equity)    : {summary.final_trading_equity:>14,.2f} บาท")
-    print(f"      - ถังเงินออมปลอดภัย (Safe Bucket Skim) : {summary.safe_reserve_bucket:>14,.2f} บาท")
-    print(f"      - ความมั่งคั่งสุทธิรวม (Total Wealth)   : {summary.total_combined_wealth:>14,.2f} บาท")
-    print(f"      - ผลตอบแทนสุทธิรวม (Total Return)      : {summary.total_return_pct:>13.2f}%")
-    print(f"      - ผลตอบแทนทบต้นต่อปี (CAGR)            : {summary.cagr_pct:>13.2f}%")
-    print(f"      - การย่อตัวสูงสุด (Max Drawdown)       : {summary.max_drawdown_pct:>13.2f}%")
-    print(f"      - Sharpe Ratio / Sortino Ratio        : {summary.sharpe_ratio:>6.2f} / {summary.sortino_ratio:.2f}")
-    print(f"      - จำนวนไม้ที่เทรดทั้งหมด (Total Trades) : {len(summary.trades):>14} ไม้")
-    print(f"      - อัตราชนะ (Win Rate)                 : {summary.win_rate_pct:>13.2f}%")
-    print(f"      - Profit Factor                       : {summary.profit_factor:>14.2f}")
-    print(f"      - ค่าคาดหวังต่อไม้ (Expectancy)        : {summary.expectancy_thb:>14,.2f} บาท/ไม้")
+    normal_summary = run_normal_generic_bot_backtest(stock_map, idx_df, cfg, start_idx=60)
+    chart_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backtest_comparison_chart.png")
+    save_backtest_comparison_chart(summary, normal_summary, idx_df, chart_out)
+
+    print("\n[5/6] สรุปผลการจำลองพอร์ตเปรียบเทียบ: The Secret Quant Bot vs. Normal Bot (บอททั่วไป):")
+    print(f"      {'ตัวชี้วัด (Metric)':<38} | {'The Secret Quant Bot':>20} | {'Normal Bot (บอททั่วไป)':>22}")
+    print("      " + "-" * 86)
+    print(f"      {'เงินทุนตั้งต้น (Initial Capital)':<38} | {summary.initial_capital:>16,.2f} บาท | {normal_summary.initial_capital:>18,.2f} บาท")
+    print(f"      {'พอร์ตเทรดปลายงวด (Trading Equity)':<38} | {summary.final_trading_equity:>16,.2f} บาท | {normal_summary.final_trading_equity:>18,.2f} บาท")
+    print(f"      {'ถังเงินออมปลอดภัย (Safe Bucket Skim)':<38} | {summary.safe_reserve_bucket:>16,.2f} บาท | {normal_summary.safe_reserve_bucket:>18,.2f} บาท")
+    print(f"      {'ความมั่งคั่งสุทธิรวม (Total Wealth)':<38} | {summary.total_combined_wealth:>16,.2f} บาท | {normal_summary.total_combined_wealth:>18,.2f} บาท")
+    print(f"      {'ผลตอบแทนสุทธิรวม (Total Return)':<38} | {summary.total_return_pct:>+19.2f}% | {normal_summary.total_return_pct:>+21.2f}%")
+    print(f"      {'ผลตอบแทนทบต้นต่อปี (CAGR)':<38} | {summary.cagr_pct:>+19.2f}% | {normal_summary.cagr_pct:>+21.2f}%")
+    print(f"      {'การย่อตัวสูงสุด (Max Drawdown)':<38} | {summary.max_drawdown_pct:>19.2f}% | {normal_summary.max_drawdown_pct:>21.2f}%")
+    print(f"      {'Sharpe Ratio / Sortino Ratio':<38} | {f'{summary.sharpe_ratio:.2f} / {summary.sortino_ratio:.2f}':>20} | {f'{normal_summary.sharpe_ratio:.2f} / {normal_summary.sortino_ratio:.2f}':>22}")
+    print(f"      {'จำนวนไม้ที่เทรดทั้งหมด (Total Trades)':<38} | {len(summary.trades):>18} ไม้ | {len(normal_summary.trades):>20} ไม้")
+    print(f"      {'อัตราชนะ (Win Rate)':<38} | {summary.win_rate_pct:>19.2f}% | {normal_summary.win_rate_pct:>21.2f}%")
+    print(f"      {'Profit Factor':<38} | {summary.profit_factor:>20.2f} | {normal_summary.profit_factor:>22.2f}")
+    print(f"      {'ค่าคาดหวังต่อไม้ (Expectancy)':<38} | {summary.expectancy_thb:>+14,.2f} ฿/ไม้ | {normal_summary.expectancy_thb:>+16,.2f} ฿/ไม้")
 
     if summary.trades:
         print("\n      ตัวอย่างประวัติการเทรด 5 ไม้ล่าสุด (พร้อม Thesis Tag & Ratchet Stop):")

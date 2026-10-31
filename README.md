@@ -13,9 +13,11 @@
 ```text
 the-secret-quant-book/
 ├── full_bot/
-│   └── the_secret_quant_full_bot.py           # ระบบบอทเทรดฉบับสมบูรณ์ครบทั้ง 14 บท (รันได้ทันที)
+│   └── the_secret_quant_full_bot.py           # ระบบบอทเทรดฉบับสมบูรณ์ครบทั้ง 14 บท + ระบบเปรียบเทียบกับ Normal Bot
 ├── data/
 │   └── sample_thai_stocks_ohlcv.csv           # ข้อมูลราคาหุ้นจำลองย้อนหลัง 500 วันทำการ (3,500 แถว) สำหรับทำ Backtest
+├── assets/
+│   └── backtest_comparison_chart.png          # กราฟเปรียบเทียบผลการทดสอบ The Secret Quant Bot vs Normal Bot
 ├── chapters_combined/                         # โค้ดรวมตามกลุ่มบทเรียน (6 ไฟล์หลัก)
 │   ├── 01_ch01_to_ch04_four_pillars_bot.py
 │   ├── 02_ch05_to_ch06_pit_backtest_and_wfe.py
@@ -54,7 +56,7 @@ python3 -m venv .venv
 source .venv/bin/activate   # (สำหรับ Windows ใช้: .venv\Scripts\activate)
 pip install -r requirements.txt
 
-# 3. รันบอทตัวเต็มพร้อมข้อมูล Backtest ในโฟลเดอร์ data/ ได้ทันที
+# 3. รันบอทตัวเต็มพร้อมสร้างกราฟเปรียบเทียบกับ Normal Bot อัตโนมัติ
 python3 full_bot/the_secret_quant_full_bot.py --csv data/sample_thai_stocks_ohlcv.csv
 
 # 4. หรือรันโค้ดแยกตามบทในโฟลเดอร์ chapters_combined/ หรือ chapters_by_script/
@@ -64,23 +66,33 @@ python3 chapters_by_script/script_03_ch05_point_in_time_backtest.py
 
 ---
 
-## 📊 ผลลัพธ์การรันทดสอบบอทตัวเต็ม (`the_secret_quant_full_bot.py` + `sample_thai_stocks_ohlcv.csv`)
+## 📊 ผลลัพธ์การรันเปรียบเทียบหมัดต่อหมัด: `The Secret Quant Bot` vs. `Normal Bot (SMA/RSI ทั่วไป)`
 
-เมื่อรันคำสั่ง `python3 full_bot/the_secret_quant_full_bot.py --csv data/sample_thai_stocks_ohlcv.csv` ระบบจะจำลองการเทรดแบบ **Point-in-Time Event-Driven Backtest** (คำนวณสัญญาณ ณ สิ้นวัน `T-1` และส่งคำสั่งซื้อขายที่ราคาเปิดวัน `T` พร้อมหักค่าธรรมเนียม `0.157%` และ `Slippage`) บนข้อมูลจำลอง 500 วันทำการ (6 หลักทรัพย์ตัวแทนกลุ่มอุตสาหกรรม + ดัชนีตลาด `SET_INDEX`):
+เมื่อรันคำสั่ง `python3 full_bot/the_secret_quant_full_bot.py --csv data/sample_thai_stocks_ohlcv.csv` ระบบจะรัน **Point-in-Time Event-Driven Backtest** (คำนวณสัญญาณ ณ สิ้นวัน `T-1` และส่งคำสั่งที่ราคาเปิดวัน `T` พร้อมหักค่าคอมมิชชัน `0.157%` + `VAT 7%` + `Slippage` บนข้อมูลชุดเดียวกัน 500 วันทำการ) โดยเปรียบเทียบระหว่าง:
 
-### สรุปตัวชี้วัดหลักจากการทดสอบ (Key Performance Metrics)
+1. **The Secret Quant Bot (สถาปัตยกรรมครบ 14 บท):** มีระบบตรวจจับสภาวะตลาด (`Market Regime Detector`), การโหวตฉันทามติ 3 เอเจนต์ (`3-Agent Ensemble`), การจัดสรรพอร์ตตามความเสี่ยง (`HRP` + `ATR Position Sizing`), จุดตัดขาดทุนเลื่อนล็อกกำไร (`Ratchet Stop`), และระบบดูดกำไรเข้าถังปลอดภัย (`Two-Bucket Skim`)
+2. **Normal Bot (บอท Indicator ทั่วไป):** ซื้อเมื่อราคาตัดเส้นค่าเฉลี่ย `SMA(20) > SMA(50)` หรือ `RSI(14) < 35` โดยแบ่งเงินเท่ากันทุกไม้ (`Equal Weight 20%`), ไม่มีตัวกรองสภาวะตลาด (`No Regime Filter`), และใช้จุดตัดขาดทุนคงที่ `-8%` / ขายทำกำไรคงที่ `+10%`
 
-| ตัวชี้วัด (Metric) | ผลลัพธ์จากการรันทดสอบ | คำอธิบาย |
-| :--- | :---: | :--- |
-| **เงินทุนตั้งต้น (`Initial Capital`)** | `1,000,000.00 บาท` | พอร์ตเริ่มต้นสำหรับการทดสอบระบบ |
-| **พอร์ตเทรดปลายงวด (`Trading Equity`)** | `1,144,359.36 บาท` | มูลค่าพอร์ตส่วนเก็งกำไรเชิงระบบ (Bucket #1) |
-| **ถังเงินออมปลอดภัย (`Safe Bucket Skim`)** | `7,803.58 บาท` | กำไรที่ถูกดูดออกไปล็อกเก็บในถังปลอดภัยอัตโนมัติ (Bucket #2) |
-| **ความมั่งคั่งสุทธิรวม (`Total Wealth`)** | **`1,152,162.94 บาท` (`+15.22%`)** | มูลค่ารวมสุทธิหลังหักค่าคอมมิชชัน VAT และ Slippage ครบทุกไม้ |
-| **ผลตอบแทนทบต้นต่อปี (`CAGR`)** | **`+8.45% ต่อปี`** | อัตราการเติบโตทบต้นต่อปี |
-| **การย่อตัวสูงสุด (`Max Drawdown`)** | **`-4.22%`** | ควบคุม Drawdown ให้อยู่ต่ำกว่าเพดานความเสี่ยง `-5.0%` ด้วย `ATR Sizing` + `HRP` + `Cash Shield` |
-| **Sharpe Ratio / Sortino Ratio** | **`1.98` / `3.21`** | ผลตอบแทนเทียบความผันผวนอยู่ในเกณฑ์เสถียรสูง |
-| **อัตราชนะ (`Win Rate`) & `Profit Factor`** | **`56.86%` (51 ไม้) / `PF 1.62`** | ค่าคาดหวังสุทธิ (`Expectancy`) เฉลี่ย **`+1,324.44 บาท/ไม้`** |
-| **Walk-Forward Efficiency (`WFE`)** | **`233.5%` (ผ่านเกณฑ์ `>= 50%`)** | ช่วงทดสอบนอกกลุ่มตัวอย่าง (`Out-of-Sample CAGR 12.00%`) ไม่เกิดอาการ Overfitting |
+![Head-to-Head Backtest Comparison: The Secret Quant Bot vs Normal Bot](https://raw.githubusercontent.com/Pathomphong-i/the-secret-quant-book/main/assets/backtest_comparison_chart.png)
+
+### ตารางเปรียบเทียบผลลัพธ์หมัดต่อหมัด (Head-to-Head Comparison)
+
+| ตัวชี้วัด (Metric) | **The Secret Quant Bot (14 บท)** | **Normal Bot (SMA/RSI ทั่วไป)** | ส่วนต่าง / ข้อสังเกตเชิงสถาปัตยกรรม |
+| :--- | :---: | :---: | :--- |
+| **เงินทุนตั้งต้น (`Initial Capital`)** | `1,000,000.00 บาท` | `1,000,000.00 บาท` | ใช้ข้อมูลราคา ค่าคอมมิชชัน และ Slippage ชุดเดียวกัน 100% |
+| **พอร์ตเทรดปลายงวด (`Trading Equity`)** | `1,144,359.36 บาท` | `1,026,819.95 บาท` | มูลค่าพอร์ตส่วนเก็งกำไร (Bucket #1) |
+| **ถังเงินออมปลอดภัย (`Safe Bucket Skim`)** | **`7,803.58 บาท`** | `0.00 บาท` | กำไรส่วนเกินที่ถูกล็อกแยกออกมาปลอดภัยจากความผันผวนตลาด |
+| **ความมั่งคั่งสุทธิรวม (`Total Wealth`)** | **`1,152,162.94 บาท`** | `1,026,819.95 บาท` | **ส่วนต่างความมั่งคั่งสุทธิ `+125,342.99 บาท`** |
+| **ผลตอบแทนสุทธิรวม (`Total Return`)** | **`+15.22%`** | `+2.68%` | ผลตอบแทนสุทธิมากกว่าบอททั่วไป **`+12.53%` (มากกว่า `5.6 เท่า`)** |
+| **ผลตอบแทนทบต้นต่อปี (`CAGR`)** | **`+8.45% ต่อปี`** | `+1.53% ต่อปี` | อัตราการเติบโตทบต้นต่อปีสูงกว่า **`+6.92% ต่อปี`** |
+| **การย่อตัวสูงสุด (`Max Drawdown`)** | **`-4.22%`** | `-19.27%` | **ลดความเสียหายช่วงวิกฤตลงได้ถึง `4.5 เท่า`** ด้วย `Cash Shield` + `ATR Sizing` |
+| **Sharpe Ratio / Sortino Ratio** | **`1.98` / `3.21`** | `0.23` / `0.30` | ผลตอบแทนปรับด้วยความเสี่ยงสูงกว่าเกือบ **`9 เท่า`** |
+| **จำนวนไม้ที่เทรดทั้งหมด (`Total Trades`)** | **`51 ไม้`** | `197 ไม้` | **กรองสัญญาณหลอกออกไปได้ถึง `74%`** ไม่โดนค่าคอมมิชชันกัดกินพอร์ต |
+| **อัตราชนะ (`Win Rate`)** | `56.86%` | `57.36%` | แม้ Win Rate ใกล้เคียงกัน แต่ `Payoff Ratio` ต่างกันมหาศาล |
+| **Profit Factor (`PF`)** | **`1.62`** | `1.06` | บอททั่วไปแทบไม่เหลือกำไรสุทธิหลังหักค่าธรรมเนียมและจังหวะตลาดแพนิก |
+| **ค่าคาดหวังสุทธิต่อไม้ (`Expectancy`)** | **`+1,324.44 บาท/ไม้`** | `+197.04 บาท/ไม้` | กำไรคาดหวังต่อการกดคำสั่ง 1 ครั้งสูงกว่า **`6.7 เท่า`** |
+
+---
 
 ### ตัวอย่างผลลัพธ์บนหน้าจอ Terminal จริง (Full Terminal Output)
 
@@ -110,19 +122,21 @@ python3 chapters_by_script/script_03_ch05_point_in_time_backtest.py
       - Out-of-Sample CAGR (40% หลัง):  12.00% ต่อปี
       - Walk-Forward Efficiency (WFE):  233.5% -> [ผ่านเกณฑ์มาตรฐาน (Robust >= 50%)]
 
-[5/6] สรุปผลการจำลองพอร์ตเต็มรูปแบบ (Point-in-Time Backtest & Two-Bucket System):
-      - เงินทุนตั้งต้น (Initial Capital)       :   1,000,000.00 บาท
-      - พอร์ตเทรดปลายงวด (Trading Equity)    :   1,144,359.36 บาท
-      - ถังเงินออมปลอดภัย (Safe Bucket Skim) :       7,803.58 บาท
-      - ความมั่งคั่งสุทธิรวม (Total Wealth)   :   1,152,162.94 บาท
-      - ผลตอบแทนสุทธิรวม (Total Return)      :         15.22%
-      - ผลตอบแทนทบต้นต่อปี (CAGR)            :          8.45%
-      - การย่อตัวสูงสุด (Max Drawdown)       :         -4.22%
-      - Sharpe Ratio / Sortino Ratio        :   1.98 / 3.21
-      - จำนวนไม้ที่เทรดทั้งหมด (Total Trades) :             51 ไม้
-      - อัตราชนะ (Win Rate)                 :         56.86%
-      - Profit Factor                       :           1.62
-      - ค่าคาดหวังต่อไม้ (Expectancy)        :       1,324.44 บาท/ไม้
+[5/6] สรุปผลการจำลองพอร์ตเปรียบเทียบ: The Secret Quant Bot vs. Normal Bot (บอททั่วไป):
+      ตัวชี้วัด (Metric)                     | The Secret Quant Bot | Normal Bot (บอททั่วไป)
+      --------------------------------------------------------------------------------------
+      เงินทุนตั้งต้น (Initial Capital)       |     1,000,000.00 บาท |       1,000,000.00 บาท
+      พอร์ตเทรดปลายงวด (Trading Equity)      |     1,144,359.36 บาท |       1,026,819.95 บาท
+      ถังเงินออมปลอดภัย (Safe Bucket Skim)   |         7,803.58 บาท |               0.00 บาท
+      ความมั่งคั่งสุทธิรวม (Total Wealth)     |     1,152,162.94 บาท |       1,026,819.95 บาท
+      ผลตอบแทนสุทธิรวม (Total Return)        |              +15.22% |                 +2.68%
+      ผลตอบแทนทบต้นต่อปี (CAGR)              |               +8.45% |                 +1.53%
+      การย่อตัวสูงสุด (Max Drawdown)         |               -4.22% |                -19.27%
+      Sharpe Ratio / Sortino Ratio           |          1.98 / 3.21 |            0.23 / 0.30
+      จำนวนไม้ที่เทรดทั้งหมด (Total Trades)  |               51 ไม้ |                197 ไม้
+      อัตราชนะ (Win Rate)                    |               56.86% |                 57.36%
+      Profit Factor                          |                 1.62 |                   1.06
+      ค่าคาดหวังต่อไม้ (Expectancy)          |       +1,324.44 ฿/ไม้ |          +197.04 ฿/ไม้
 
       ตัวอย่างประวัติการเทรด 5 ไม้ล่าสุด (พร้อม Thesis Tag & Ratchet Stop):
       * STOCK_ENERG.BK [MEAN_REVERSION ] 2024-10-16 @  32.94 -> 2024-10-22 @  33.69 | PnL: +3,768.70 บาท (+0.51R) | MEAN_REVERT_TARGET (ราคาดีดกลับแตะค่าเฉลี่ย SMA 20 / RSI >= 65)
