@@ -620,3 +620,53 @@ def fetch_thai_stocks_and_corporate_actions(
         split_df = pd.DataFrame(columns=["ex_date", "symbol", "action_type", "old_par", "new_par", "xr_old_shares", "xr_new_shares", "xr_sub_price"])
         div_df = pd.DataFrame([{"xd_date": dates[20], "symbol": "PTT", "dps": 1.20}])
         return pd.DataFrame(ohlcv_rows), split_df, div_df
+
+# ==============================================================================
+# Snippet 3.13: Probabilistic & Deflated Sharpe Ratio (Bailey & López de Prado, 2014 / AFML Ch. 14)
+# ==============================================================================
+def compute_probabilistic_and_deflated_sharpe(
+    returns: np.ndarray,
+    benchmark_sr_annual: float = 0.50,
+    num_trials_k: int = 25,
+    trials_sr_std_annual: float = 0.45,
+    periods_per_year: int = 245,
+) -> dict:
+    """
+    คำนวณ Probabilistic Sharpe Ratio (PSR) และ Deflated Sharpe Ratio (DSR)
+    ตามสมการของ Bailey & López de Prado (2014) / AFML Ch. 14
+    """
+    from scipy.stats import norm, skew, kurtosis
+    r = np.asarray(returns, dtype=float)
+    t_obs = len(r)
+    if t_obs < 30 or np.std(r, ddof=1) == 0:
+        return {"sr_annual": 0.0, "psr": 0.0, "dsr": 0.0, "passed_institutional_gate": False}
+
+    sr_per_bar = float(np.mean(r) / np.std(r, ddof=1))
+    sr_annual = float(sr_per_bar * np.sqrt(periods_per_year))
+    sr_bench_bar = float(benchmark_sr_annual / np.sqrt(periods_per_year))
+
+    g3 = float(skew(r, bias=False))
+    g4 = float(kurtosis(r, fisher=False, bias=False))  # Pearson kurtosis (Normal = 3.0)
+
+    denom_var = max(1e-9, (1.0 - g3 * sr_per_bar + ((g4 - 1.0) / 4.0) * (sr_per_bar ** 2)) / (t_obs - 1))
+    sr_std_bar = float(np.sqrt(denom_var))
+
+    psr = float(norm.cdf((sr_per_bar - sr_bench_bar) / sr_std_bar))
+
+    euler_gamma = 0.5772156649
+    k_eff = max(2, int(num_trials_k))
+    z1 = float(norm.ppf(1.0 - 1.0 / k_eff))
+    z2 = float(norm.ppf(1.0 - 1.0 / (k_eff * np.e)))
+    sr0_max_annual = float(trials_sr_std_annual * ((1.0 - euler_gamma) * z1 + euler_gamma * z2))
+    sr0_max_bar = float(sr0_max_annual / np.sqrt(periods_per_year))
+
+    dsr = float(norm.cdf((sr_per_bar - sr0_max_bar) / sr_std_bar))
+    return {
+        "sr_annual": round(sr_annual, 3),
+        "skewness": round(g3, 3),
+        "kurtosis": round(g4, 3),
+        "expected_max_sr_annual": round(sr0_max_annual, 3),
+        "psr": round(psr, 4),
+        "dsr": round(dsr, 4),
+        "passed_institutional_gate": bool(dsr >= 0.95),
+    }
