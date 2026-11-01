@@ -37,47 +37,6 @@ def compute_efficiency_ratio_and_snr(close: pd.Series) -> pd.DataFrame:
         "trend_quality": regime_label
     })
 
-# ==============================================================================
-# Snippet 4.2B: Ornstein-Uhlenbeck Half-Life of Mean Reversion (Ernest Chan, 2013 Eq. 2.5-2.6)
-# ==============================================================================
-def compute_ou_half_life(price_series: np.ndarray, vr_lag: int = 5) -> dict:
-    """
-    คำนวณค่า Ornstein-Uhlenbeck (OU) Half-Life of Mean Reversion (Ernest Chan, 2013 Eq. 2.5-2.6)
-    และค่า Variance Ratio VR(q) เพื่อจำแนกนิสัยหุ้นและกำหนดกรอบเวลาถือครองอัตโนมัติ
-    """
-    p = np.asarray(price_series, dtype=float)
-    if len(p) < 25 or np.any(p <= 0):
-        return {"lambda_coef": 0.0, "half_life_days": float("inf"), "variance_ratio": 1.0, "is_mean_reverting": False}
-
-    y = np.log(p)
-    y_lag = y[:-1]
-    dy = np.diff(y)
-
-    x_mat = np.column_stack([np.ones_like(y_lag), y_lag])
-    theta, _, _, _ = np.linalg.lstsq(x_mat, dy, rcond=None)
-    lam = float(theta[1])
-
-    if lam < -1e-6:
-        half_life = float(-np.log(2.0) / lam)
-    else:
-        half_life = float("inf")
-
-    q = max(2, min(int(vr_lag), len(y) // 3))
-    var_1 = float(np.var(dy, ddof=1))
-    var_q = float(np.var(y[q:] - y[:-q], ddof=1))
-    vr = float(var_q / (q * var_1)) if var_1 > 0 else 1.0
-
-    is_mr = bool((lam < 0) and (1.5 <= half_life <= 25.0) and (vr < 0.95))
-    optimal_lookback = int(np.clip(round(half_life), 5, 30)) if np.isfinite(half_life) else 20
-    return {
-        "lambda_coef": round(lam, 5),
-        "half_life_days": round(half_life, 2) if np.isfinite(half_life) else float("inf"),
-        "variance_ratio": round(vr, 3),
-        "optimal_lookback_days": optimal_lookback,
-        "is_mean_reverting": is_mr,
-    }
-
-
 if __name__ == "__main__":
     np.random.seed(42)
     trend_prices = pd.Series(100 + np.cumsum(np.random.normal(0.8, 0.9, 30)))

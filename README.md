@@ -124,17 +124,11 @@ python3 reproduce_benchmarks.py
 ```
 *หมายเหตุความโปร่งใส:* สคริปต์ `reproduce_benchmarks.py` แยกผลลัพธ์ออกเป็น **ตารางที่ ข.1** (ผลทดสอบเปรียบเทียบโครงสร้างพื้นฐาน Core Engine เล่ม 1–2 และ เล่ม 1–8 บนชุดข้อมูลตัวอย่าง หักค่าคอมมิชชั่น 0.157%/ขา และ Slippage) และ **ตารางที่ ข.2** (ผลจำลองเชิงสาธิตภายใต้สมมติฐานควบคุม — Controlled Synthetic Ablation Studies ประจำเล่มที่ 3–8 เพื่อแสดงผลกระทบส่วนเพิ่มของแต่ละโมดูลด้วย Deterministic Seed = 2026)
 
-### 4. รันชุดทดสอบความถูกต้องทางคณิตศาสตร์ วิศวกรรม และโมดูลมาตรฐานสากล 10 ชุด (Automated Audit & Institutional Quant Suite)
+### 4. รันชุดทดสอบความถูกต้องทางคณิตศาสตร์และวิศวกรรม (Automated Audit Test Suite)
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
-ครอบคลุมการตรวจสอบ 10 ชุดทดสอบหลัก:
-- **P0/P1 Engineering Guards:** การจัดเวลาข่าว Point-in-Time ข้ามวันหยุดและช่วงพักเที่ยง, การกวาดยกเลิกออเดอร์ค้างของ Kill-Switch ระดับ 3, การป้องกันตัวหารติดลบในค่า WFE, การกรองจำนวนแท่งเทียนขั้นต่ำของ RS Score และการรับมือกระดานว่าง (Ceiling/Floor) ในการคำนวณ OBI
-- **Institutional Quant Modules (López de Prado / Ernest Chan / Microstructure / Supply Chain):**
-  - `compute_probabilistic_and_deflated_sharpe()` (เล่มที่ 3 — Probabilistic & Deflated Sharpe Ratio: PSR/DSR)
-  - `compute_ou_half_life()` (เล่มที่ 4 — Ornstein-Uhlenbeck Half-Life of Mean Reversion & Variance Ratio)
-  - `compute_kyle_amihud_and_vpin()` (เล่มที่ 6 — Kyle's Lambda, Amihud Illiquidity & VPIN Order Flow Toxicity)
-  - `compute_supply_chain_lead_lag_and_kalman_spread()` (เล่มที่ 7 — Tech Supply Chain Revenue Spillover & Kalman Filter Dynamic Beta)
+ครอบคลุมการตรวจสอบกรณีขอบเขตสำคัญ (Edge Cases): การจัดเวลาข่าว Point-in-Time ข้ามวันหยุดและช่วงพักเที่ยง, การกวาดยกเลิกออเดอร์ค้างของ Kill-Switch ระดับ 3, การป้องกันตัวหารติดลบในค่า WFE, การกรองจำนวนแท่งเทียนขั้นต่ำของ RS Score และการรับมือกระดานว่าง (Ceiling/Floor) ในการคำนวณ OBI
 
 ### 5. รันทดสอบแยกตามเล่ม (Volumes 1–8)
 ```bash

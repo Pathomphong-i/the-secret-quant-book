@@ -43,62 +43,6 @@ def compute_total_roundtrip_friction(
     }
 
 
-# ==============================================================================
-# Snippet 6.13: Kyle's Lambda, Amihud Illiquidity & VPIN Toxicity (López de Prado AFML Ch. 19)
-# ==============================================================================
-def compute_kyle_amihud_and_vpin(
-    prices: np.ndarray,
-    volumes: np.ndarray,
-    n_buckets: int = 10,
-) -> dict:
-    """
-    คำนวณตัวชี้วัดโครงสร้างจุลภาคของตลาด (Microstructural Features — López de Prado AFML Ch. 19):
-    1. Kyle's Lambda (Price Impact per Unit Signed Order Flow)
-    2. Amihud's Illiquidity Ratio (|Return| per Million THB Dollar Volume)
-    3. Bulk-Volume VPIN (Volume-Synchronized Probability of Informed Trading)
-    """
-    from scipy.stats import norm
-    p = np.asarray(prices, dtype=float)
-    v = np.asarray(volumes, dtype=float)
-    if len(p) < 10 or len(p) != len(v) or np.any(p <= 0):
-        return {"kyle_lambda": 0.0, "amihud_illiq_per_m": 0.0, "vpin": 0.0, "high_toxicity_alert": False}
-
-    dp = np.diff(p)
-    ret = dp / p[:-1]
-    vol_sub = np.maximum(v[1:], 1.0)
-    dollar_vol_m = (p[1:] * vol_sub) / 1e6
-
-    signs = np.where(dp > 0, 1.0, np.where(dp < 0, -1.0, 0.0))
-    for i in range(1, len(signs)):
-        if signs[i] == 0.0:
-            signs[i] = signs[i - 1] if signs[i - 1] != 0.0 else 1.0
-    signed_vol = signs * vol_sub
-    denom = float(np.sum(signed_vol ** 2))
-    kyle_lambda = float(np.maximum(0.0, np.sum(dp * signed_vol) / denom)) if denom > 0 else 0.0
-
-    amihud_illiq = float(np.mean(np.abs(ret) / np.maximum(dollar_vol_m, 1e-6)))
-
-    sigma_dp = float(np.std(dp, ddof=1)) if len(dp) > 1 else 1e-6
-    z_scores = dp / max(sigma_dp, 1e-6)
-    buy_frac = norm.cdf(z_scores)
-    v_buy = vol_sub * buy_frac
-    v_sell = vol_sub * (1.0 - buy_frac)
-
-    k = max(2, min(int(n_buckets), len(vol_sub)))
-    chunks_b = np.array_split(v_buy, k)
-    chunks_s = np.array_split(v_sell, k)
-    chunks_v = np.array_split(vol_sub, k)
-    imbalances = [abs(float(np.sum(cb) - np.sum(cs))) / max(float(np.sum(cv)), 1.0) for cb, cs, cv in zip(chunks_b, chunks_s, chunks_v)]
-    vpin = float(np.clip(np.mean(imbalances), 0.0, 1.0))
-
-    return {
-        "kyle_lambda": round(kyle_lambda, 8),
-        "amihud_illiq_per_m": round(amihud_illiq, 6),
-        "vpin": round(vpin, 4),
-        "high_toxicity_alert": bool(vpin >= 0.65),
-    }
-
-
 if __name__ == "__main__":
     res = compute_total_roundtrip_friction(24.90, 25.00, 30000, 20000, 0.10)
     print(f"Total Round-Trip Friction: {res['total_friction_pct']}% | Detail: {res}")
