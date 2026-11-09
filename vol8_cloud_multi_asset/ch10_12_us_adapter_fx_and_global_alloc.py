@@ -159,4 +159,4 @@ def run_daily_cloud_production_cycle(
     }
 
 # ทดสอบรันวงจรหลักสำหรับพอร์ต 5 ล้านบาทในสภาวะเฝ้าระวัง (SIDEWAYS_CAUTION)
-print(run_daily_cloud_production_cycle(5_000_000, {"PTT": 2000}, {"PTT": 2000}, -1.2, "SIDEWAYS_CAUTION", 900.0))
+print(run_daily_cloud_production_cycle(5_000_000, {"ALPHA": 2000}, {"ALPHA": 2000}, -1.2, "SIDEWAYS_CAUTION", 900.0))

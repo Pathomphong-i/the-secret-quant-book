@@ -86,9 +86,9 @@ class IdempotentOrderLedger:
 
 # ทดสอบการป้องกันคำสั่งซ้ำซ้อนเมื่อบอทพยายามส่งไม้เดิมซ้ำ
 ledger = IdempotentOrderLedger()
-order_key = ledger.make_key("2026-10-15", "4PILLAR", "ADVANC", "BUY", slice_idx=1)
-print("Attempt 1:", ledger.register_or_block(order_key, "ADVANC", "BUY", 1000))
-print("Attempt 2:", ledger.register_or_block(order_key, "ADVANC", "BUY", 1000))
+order_key = ledger.make_key("2026-10-15", "4PILLAR", "BETA", "BUY", slice_idx=1)
+print("Attempt 1:", ledger.register_or_block(order_key, "BETA", "BUY", 1000))
+print("Attempt 2:", ledger.register_or_block(order_key, "BETA", "BUY", 1000))
 
 
 # ==============================================================================
@@ -125,10 +125,10 @@ def reconcile_positions_with_broker(
         "position_mismatches": position_mismatches,
     }
 
-# ทดสอบกระทบยอดพอร์ตตอนเช้า (กรณีพบหุ้น BDMS ไม่ตรงกัน 1,000 หุ้น)
+# ทดสอบกระทบยอดพอร์ตตอนเช้า (กรณีพบหุ้น THETA ไม่ตรงกัน 1,000 หุ้น)
 res = reconcile_positions_with_broker(
-    local_positions={"ADVANC": 1500, "SCB": 2000, "BDMS": 3000},
-    broker_positions={"ADVANC": 1500, "SCB": 2000, "BDMS": 2000},
+    local_positions={"BETA": 1500, "KAPPA": 2000, "THETA": 3000},
+    broker_positions={"BETA": 1500, "KAPPA": 2000, "THETA": 2000},
     local_cash=125000.0, broker_cash=125012.45,
 )
 print(f"Status: {res['status']} | Allow Trade: {res['allow_execution']}")
@@ -168,8 +168,8 @@ def send_quant_telemetry_alert(
     return {"sent": True, "silent": (severity == "INFO"), "message": payload_text}
 
 # ทดสอบส่งแจ้งเตือนพอร์ตตอนเช้า และทดสอบระบบป้องกันการส่งข้อความซ้ำรัวๆ
-msg1 = send_quant_telemetry_alert("CRITICAL", "RECON_FAIL", "Broker Mismatch", {"Symbol": "BDMS", "Diff": -1000}, now_ts=1000.0)
-msg2 = send_quant_telemetry_alert("CRITICAL", "RECON_FAIL", "Broker Mismatch", {"Symbol": "BDMS", "Diff": -1000}, now_ts=1015.0)
+msg1 = send_quant_telemetry_alert("CRITICAL", "RECON_FAIL", "Broker Mismatch", {"Symbol": "THETA", "Diff": -1000}, now_ts=1000.0)
+msg2 = send_quant_telemetry_alert("CRITICAL", "RECON_FAIL", "Broker Mismatch", {"Symbol": "THETA", "Diff": -1000}, now_ts=1015.0)
 print("Send 1:", msg1["sent"], "| Preview:", msg1["message"].replace("\n", " | "))
 print("Send 2 (15s later):", msg2)
 
@@ -543,4 +543,4 @@ def run_daily_cloud_production_cycle(
     }
 
 # ทดสอบรันวงจรหลักสำหรับพอร์ต 5 ล้านบาทในสภาวะเฝ้าระวัง (SIDEWAYS_CAUTION)
-print(run_daily_cloud_production_cycle(5_000_000, {"PTT": 2000}, {"PTT": 2000}, -1.2, "SIDEWAYS_CAUTION", 900.0))
+print(run_daily_cloud_production_cycle(5_000_000, {"ALPHA": 2000}, {"ALPHA": 2000}, -1.2, "SIDEWAYS_CAUTION", 900.0))

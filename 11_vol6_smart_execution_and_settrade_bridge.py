@@ -579,7 +579,7 @@ def parse_settrade_bid_offer_snapshot(msg: dict) -> tuple[float, float, list[int
 
 if __name__ == "__main__":
     sample_settrade_msg = {
-        "symbol": "ADVANC",
+        "symbol": "BETA",
         "bid_price_1": 218.0, "bid_volume_1": 85_000,
         "bid_price_2": 217.0, "bid_volume_2": 62_000,
         "bid_price_3": 216.0, "bid_volume_3": 54_000,

@@ -59,7 +59,7 @@ def run_8vol_masterclass_pipeline() -> None:
     v8 = _load_mod("vol8_cloud", "13_vol8_cloud_ops_tfex_and_global_multi_asset.py")
 
     # 1. [เล่มที่ 3] ดึงข้อมูลและทำความสะอาดผ่าน Sanity Filter (Data Engineering & Hygiene)
-    raw_df, _, _ = v3.fetch_thai_stocks_and_corporate_actions(symbols=["ADVANC.BK"], period="6mo")
+    raw_df, _, _ = v3.fetch_thai_stocks_and_corporate_actions(symbols=["BETA.BK"], period="6mo")
     clean_df, quarantine_df = v3.sanitize_ohlcv_frame(raw_df)
     print(
         f"[1/6 เล่มที่ 3 - Data & Hygiene] ดึงและคัดกรองข้อมูลสะอาดสำเร็จ: {len(clean_df)} แท่งเทียน "
@@ -70,7 +70,7 @@ def run_8vol_masterclass_pipeline() -> None:
     regime_probs = v4.compute_regime_probabilities(breadth=0.68, atr_zscore=-0.30, index_er20=0.58)
     dominant_regime = str(regime_probs.idxmax())
     candidates_df = pd.DataFrame([
-        {"symbol": "ADVANC", "trend_agent_score": 84.0, "pullback_agent_score": 72.0}
+        {"symbol": "BETA", "trend_agent_score": 84.0, "pullback_agent_score": 72.0}
     ])
     alpha_df = v4.combine_multi_agent_alpha_score(candidates_df, regime_probs)
     alpha_score = float(alpha_df.loc[0, "final_alpha_score"])
@@ -83,11 +83,11 @@ def run_8vol_masterclass_pipeline() -> None:
     # 3. [เล่มที่ 7] กรองข่าวด้วย LLM JSON + งบการเงิน + เรดาร์ความเสี่ยงมหภาค (Master AI Gate)
     raw_llm = v7.call_gemini_structured_json(
         system_prompt="Return strict quantitative news JSON.",
-        user_text="ADVANC รายงานกำไรสุทธิเติบโตแข็งแกร่งและกระแสเงินสดจากการดำเนินงานสูงกว่าคาด",
+        user_text="BETA รายงานกำไรสุทธิเติบโตแข็งแกร่งและกระแสเงินสดจากการดำเนินงานสูงกว่าคาด",
     )
     news_sig = v7.parse_news_to_structured_signal(raw_llm)
     ai_gate = v7.run_multimodal_ai_quant_gate(
-        ticker="ADVANC",
+        ticker="BETA",
         base_hrp_weight=0.14,
         hygiene_passed=True,
         is_sell_on_fact_trap=False,
@@ -130,8 +130,8 @@ def run_8vol_masterclass_pipeline() -> None:
 
     # 6. [เล่มที่ 8] บันทึกคำสั่งลง Idempotent SQLite WAL Ledger และคำนวณสัดส่วนพอร์ต Global Multi-Asset
     ledger = v8.IdempotentOrderLedger(db_path=":memory:")
-    order_key = ledger.make_key("2026-11-02", "VOL1_TO_8_MASTER", "ADVANC", "BUY", slice_idx=1)
-    ok_send, ledger_status = ledger.register_or_block(order_key, "ADVANC", "BUY", int(rounded["board_lot_shares"]))
+    order_key = ledger.make_key("2026-11-02", "VOL1_TO_8_MASTER", "BETA", "BUY", slice_idx=1)
+    ok_send, ledger_status = ledger.register_or_block(order_key, "BETA", "BUY", int(rounded["board_lot_shares"]))
     global_alloc = v8.allocate_global_multi_asset_portfolio(
         total_capital_thb=5_000_000.0,
         market_regime="LOW_VOL_BULL",

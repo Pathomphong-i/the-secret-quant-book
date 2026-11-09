@@ -167,12 +167,12 @@ def sanitize_pit_news_prompt(
     }
 
 
-sample_news = "In 2023, DELTA announced Q3 revenue expansion of 22% YoY."
+sample_news = "In 2023, OMEGA announced Q3 revenue expansion of 22% YoY."
 print(
     sanitize_pit_news_prompt(
         sample_news,
         pub_timestamp="2023-10-20T17:40:00+07:00",
-        tickers_to_mask=["DELTA"],
+        tickers_to_mask=["OMEGA"],
         received_timestamp="2023-10-20T17:42:15+07:00",
         set_holidays={"2023-10-23"},  # วันปิยมหาราช (วันจันทร์หยุด -> เลื่อนไปอังคาร 24 ต.ค.)
     )

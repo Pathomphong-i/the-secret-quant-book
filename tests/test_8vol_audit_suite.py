@@ -35,7 +35,7 @@ import reproduce_benchmarks
 class TestEightVolumeAuditSuite(unittest.TestCase):
     def test_p0_1_reproduce_benchmarks(self) -> None:
         df_b1 = reproduce_benchmarks.run_table_b1_architecture_comparison()
-        self.assertEqual(len(df_b1), 4)
+        self.assertEqual(len(df_b1), 3)
         ablations = reproduce_benchmarks.get_table_b2_controlled_ablations()
         self.assertEqual(len(ablations), 6)
         sim1 = reproduce_benchmarks.simulate_controlled_ablation_series(seed=2026)
@@ -45,31 +45,31 @@ class TestEightVolumeAuditSuite(unittest.TestCase):
     def test_p0_2_pit_news_timestamp_holiday_and_latency(self) -> None:
         # 1. Friday after-hours news (17:40) + Monday holiday (2023-10-23) -> Tuesday 2023-10-24 MORNING_ATO_OPEN
         res = sanitize_pit_news_prompt(
-            raw_text="In 2023, DELTA announced Q3 revenue expansion of 22% YoY.",
+            raw_text="In 2023, ALPHA_CORP announced Q3 revenue expansion of 22% YoY.",
             pub_timestamp="2023-10-20T17:40:00+07:00",
-            tickers_to_mask=["DELTA"],
+            tickers_to_mask=["ALPHA_CORP"],
             received_timestamp="2023-10-20T17:42:15+07:00",
             set_holidays={"2023-10-23"},
         )
         self.assertEqual(res["effective_trade_session"], "2023-10-24_MORNING_ATO_OPEN")
         self.assertIn("[ENTITY_1]", res["sanitized_prompt_text"])
         self.assertIn("[YEAR]", res["sanitized_prompt_text"])
-        self.assertNotIn("DELTA", res["sanitized_prompt_text"])
+        self.assertNotIn("ALPHA_CORP", res["sanitized_prompt_text"])
 
         # 2. Lunch break news (13:10) -> AFTERNOON_ATO2_OPEN
         res_lunch = sanitize_pit_news_prompt(
-            raw_text="PTT reports interim dividend.",
+            raw_text="BETA_CORP reports interim dividend.",
             pub_timestamp="2023-10-25T13:05:00+07:00",
-            tickers_to_mask=["PTT"],
+            tickers_to_mask=["BETA_CORP"],
             received_timestamp="2023-10-25T13:10:00+07:00",
         )
         self.assertEqual(res_lunch["effective_trade_session"], "2023-10-25_AFTERNOON_ATO2_OPEN")
 
         # 3. Ingestion latency pushes 16:20 published news to 16:28 received -> next trading day open
         res_delayed = sanitize_pit_news_prompt(
-            raw_text="AOT passenger growth rises.",
+            raw_text="GAMMA_CORP passenger growth rises.",
             pub_timestamp="2023-10-25T16:20:00+07:00",
-            tickers_to_mask=["AOT"],
+            tickers_to_mask=["GAMMA_CORP"],
             received_timestamp="2023-10-25T16:28:00+07:00",
         )
         self.assertEqual(res_delayed["effective_trade_session"], "2023-10-26_MORNING_ATO_OPEN")

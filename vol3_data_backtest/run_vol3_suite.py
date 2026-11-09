@@ -572,7 +572,7 @@ def run_head_to_head_benchmark(n_days: int = 2450, seed: int = 42) -> pd.DataFra
 # [LAST-MILE BRIDGE] ดึงข้อมูลหุ้นไทยจริง + ประวัติปันผล (XD) และแตกพาร์ (Split) จาก yfinance
 # ==============================================================================
 def fetch_thai_stocks_and_corporate_actions(
-    symbols: list[str] = ["PTT.BK", "ADVANC.BK", "AOT.BK", "BDMS.BK", "CPALL.BK", "SCB.BK"],
+    symbols: list[str] = ["ALPHA.BK", "BETA.BK", "GAMMA.BK", "THETA.BK", "SIGMA.BK", "KAPPA.BK"],
     period: str = "2y",
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
@@ -614,9 +614,9 @@ def fetch_thai_stocks_and_corporate_actions(
         # Offline fallback so the script always runs out-of-the-box anywhere
         dates = pd.bdate_range("2025-01-02", periods=60).strftime("%Y-%m-%d")
         ohlcv_rows = [
-            {"trade_date": d, "date": d, "symbol": "PTT", "open": 34.0, "high": 34.75, "low": 33.75, "close": 34.25, "volume": 45_000_000.0}
+            {"trade_date": d, "date": d, "symbol": "ALPHA", "open": 34.0, "high": 34.75, "low": 33.75, "close": 34.25, "volume": 45_000_000.0}
             for d in dates
         ]
         split_df = pd.DataFrame(columns=["ex_date", "symbol", "action_type", "old_par", "new_par", "xr_old_shares", "xr_new_shares", "xr_sub_price"])
-        div_df = pd.DataFrame([{"xd_date": dates[20], "symbol": "PTT", "dps": 1.20}])
+        div_df = pd.DataFrame([{"xd_date": dates[20], "symbol": "ALPHA", "dps": 1.20}])
         return pd.DataFrame(ohlcv_rows), split_df, div_df

@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 =========================================================================================
-โรบอทเทรด ที่โบรกเกอร์ไม่อยากให้คุณเขียน — เปิดแก่นความคิดของ Quant Trader ยุคใหม่
+The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น
 FULL EDUCATIONAL TRADING BOT & BACKTEST ENGINE (END-TO-END, บทที่ 1 - บทที่ 14)
 =========================================================================================
 ไฟล์นี้คือระบบ Quantitative Trading แบบครบวงจร (Full Working Version) สำหรับประกอบหนังสือ
-"โรบอทเทรด ที่โบรกเกอร์ไม่อยากให้คุณเขียน — เปิดแก่นความคิดของ Quant Trader ยุคใหม่"
+"The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น"
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
 
 คำเตือน:
@@ -1224,7 +1224,7 @@ def save_backtest_comparison_chart(
 # =========================================================================================
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="โรบอทเทรด ที่โบรกเกอร์ไม่อยากให้คุณเขียน - Full Educational Trading Bot & Backtest Engine"
+        description="The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย - Full Educational Trading Bot & Backtest Engine"
     )
     parser.add_argument(
         "--csv",
@@ -1246,7 +1246,7 @@ def main() -> None:
     cfg = QuantConfig()
 
     print("=" * 92)
-    print("  โรบอทเทรด ที่โบรกเกอร์ไม่อยากให้คุณเขียน — เปิดแก่นความคิดของ Quant Trader ยุคใหม่ (CH 1 - CH 14)")
+    print("  The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น (CH 1 - CH 14)")
     print("=" * 92)
 
     if args.regenerate_sample or not os.path.exists(args.csv):
