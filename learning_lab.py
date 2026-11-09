@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Offline exercises for the Complete 4-Volume Edition (8 stages). Python 3.10+; stdlib only.
+"""Offline exercises for 'เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python' (8 parts).
 
-Every price, fee and policy threshold is invented for teaching. No market data,
-broker, messaging, cloud or model API is used. Outputs are not investment signals.
+Python 3.10+; standard library only. Every price, fee and policy threshold is invented
+for teaching. No market data, broker, messaging, cloud or model API is used.
+Outputs are not investment signals.
 """
 from __future__ import annotations
 
@@ -248,24 +249,35 @@ def run_book(book, output):
     return [run(stage_num, output) for stage_num in BOOK_STAGES[book]]
 
 
+def run_all(output):
+    return [run(stage_num, output) for stage_num in range(1, 9)]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--all", action="store_true",
+                       help="Run all 8 parts of the Complete Single-Volume Book in order")
+    group.add_argument("--part", "--stage", "--volume", dest="volume", type=int, choices=range(1, 9),
+                       help="Run an individual book part / practice stage 1..8")
     group.add_argument("--book", type=int, choices=range(1, 5),
-                       help="Run both practice stages of Book 1..4 in order")
-    group.add_argument("--stage", "--volume", dest="volume", type=int, choices=range(1, 9),
-                       help="Run an individual practice stage 1..8")
+                       help="Run a pair of stages (1..4)")
     parser.add_argument("--output", type=Path, default=Path("learning_output"))
     args = parser.parse_args()
     try:
-        if args.book is not None:
+        if args.all:
+            outputs = run_all(args.output)
+            for idx, (path, result) in enumerate(outputs, start=1):
+                print(f"Part {idx}/8: {path}")
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+        elif args.book is not None:
             outputs = run_book(args.book, args.output)
             for idx, (path, result) in enumerate(outputs, start=1):
                 print(f"Book {args.book} (Part {idx}): {path}")
                 print(json.dumps(result, ensure_ascii=False, indent=2))
         else:
             path, result = run(args.volume, args.output)
-            print(f"Stage {args.volume}: {path}")
+            print(f"Part {args.volume}: {path}")
             print(json.dumps(result, ensure_ascii=False, indent=2))
     except (ValueError, KeyError, json.JSONDecodeError) as exc:
         parser.exit(2, f"Exercise stopped: {exc}\n")

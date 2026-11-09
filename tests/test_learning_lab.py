@@ -95,6 +95,16 @@ class LearningLabTests(unittest.TestCase):
                 self.assertEqual((Path(d_books) / fname).read_bytes(),
                                  (Path(d_stages) / fname).read_bytes())
 
+    def test_single_book_run_all_matches_parts_chain(self):
+        with tempfile.TemporaryDirectory() as d_all, tempfile.TemporaryDirectory() as d_parts:
+            all_res = lab.run_all(d_all)
+            self.assertEqual(len(all_res), 8)
+            for p in range(1, 9):
+                lab.run(p, d_parts)
+            for fname in lab.FILES:
+                self.assertEqual((Path(d_all) / fname).read_bytes(),
+                                 (Path(d_parts) / fname).read_bytes())
+
 
 if __name__ == "__main__":
     unittest.main()
