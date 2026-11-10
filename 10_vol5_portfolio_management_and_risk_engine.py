@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-The Secret Quant: 8-Volume Masterclass Series
-เล่มที่ 5: การบริหารพอร์ตโฟลิโอและวิศวกรรมความเสี่ยง (Portfolio Management & Risk Engineering)
+หนังสือ: เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python
+บทที่ 5: การบริหารพอร์ตโฟลิโอและวิศวกรรมความเสี่ยง (Portfolio Management & Risk Engineering)
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
-รวมซอร์สโค้ดครบทุกบทประจำเล่มที่ 5 พร้อมรันทดสอบได้ทันที
+รวมซอร์สโค้ดครบทุกบทประจำบทที่ 5 พร้อมรันทดสอบได้ทันที
 """
 
 from __future__ import annotations

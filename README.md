@@ -53,7 +53,7 @@ python3 -m unittest discover -s tests -p test_learning_lab.py -v
 .
 ├── LEARNING_GUIDE.md                  # คู่มือเริ่มต้นเรียนรู้และตารางตรวจผลลัพธ์ครบทั้ง 8 บท
 ├── learning_lab.py                    # ห้องแล็บหลัก 8 บท (Python Standard Library ล้วน)
-├── final_trading_system_abcd.py       # ระบบเทรดจำลองฉบับสมบูรณ์ (สแกนตลาด -> คัด 4 หุ้นกลยุทธ์ A/B/C/D -> บริหารพอร์ต -> บันทึก CSV/JSON Log -> Backtest 500 วัน)
+├── final_trading_system_abcd.py       # ระบบเทรดจำลองฉบับสมบูรณ์ (สแกนตลาด -> คัด 4 หุ้นตาม 4 กลยุทธ์หลัก -> บริหารพอร์ต -> บันทึก CSV/JSON Log -> Backtest 500 วัน)
 ├── requirements.txt                   # ไลบรารีเสริมสำหรับสคริปต์ศึกษาต่อยอดในเส้นทางที่ 2
 ├── reproduce_benchmarks.py            # สคริปต์จำลองสมมติฐานควบคุมเพื่อเปรียบเทียบแนวคิดรายหัวข้อ
 ├── run_master_8vol_pipeline.py        # สคริปต์สาธิตการเชื่อมโมดูลจำลองครบทั้ง 8 บทเข้าด้วยกัน
@@ -75,7 +75,7 @@ python3 -m unittest discover -s tests -p test_learning_lab.py -v
 ```bash
 pip install -r requirements.txt
 
-# รันระบบเทรดจำลองฉบับสมบูรณ์ (สแกนตลาด -> เลือก 4 หุ้นด้วยกลยุทธ์ A, B, C, D -> คำนวณขนาดไม้/Target/Cut-Loss -> บันทึก CSV/JSON Log -> Backtest In-Sample vs Out-of-Sample)
+# รันระบบเทรดจำลองฉบับสมบูรณ์ (สแกนตลาด -> เลือก 4 หุ้นด้วย 4 กลยุทธ์หลัก TREND_BREAKOUT, LOW_VOL_VCP, QUALITY_PULLBACK, SECTOR_ROTATION -> คำนวณขนาดไม้/Target/Cut-Loss -> บันทึก CSV/JSON Log -> Backtest In-Sample vs Out-of-Sample)
 python3 final_trading_system_abcd.py
 
 # รันชุดทดสอบความถูกต้องทั้งหมด

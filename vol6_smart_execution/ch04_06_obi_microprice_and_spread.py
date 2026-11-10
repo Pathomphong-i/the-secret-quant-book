@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-The Secret Quant: 8-Volume Masterclass Series
-เล่มที่ 6: โครงสร้างกระดานซื้อขายและอัลกอริทึมส่งคำสั่ง (Smart Execution & Order Book Microstructure)
+หนังสือ: เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python
+บทที่ 6: โครงสร้างกระดานซื้อขายและอัลกอริทึมส่งคำสั่ง (Smart Execution & Order Book Microstructure)
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
-รวมซอร์สโค้ดครบทุกบทประจำเล่มที่ 6 พร้อมรันทดสอบได้ทันที
+รวมซอร์สโค้ดครบทุกหัวข้อประจำบทที่ 6 พร้อมรันทดสอบได้ทันที
 """
 
 from __future__ import annotations

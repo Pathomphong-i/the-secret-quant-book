@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-The Secret Quant: 8-Volume Masterclass Series
-เล่มที่ 3: วิศวกรรมข้อมูลและห้องแล็บ Backtest (Data Engineering & Realistic Backtest Lab)
+หนังสือ: เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python
+บทที่ 3: วิศวกรรมข้อมูลและห้องแล็บ Backtest (Data Engineering & Realistic Backtest Lab)
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
-รวมซอร์สโค้ดครบทุกบทประจำเล่มที่ 3 พร้อมรันทดสอบได้ทันที
+รวมซอร์สโค้ดครบทุกหัวข้อประจำบทที่ 3 พร้อมรันทดสอบได้ทันที
 """
 
 from __future__ import annotations

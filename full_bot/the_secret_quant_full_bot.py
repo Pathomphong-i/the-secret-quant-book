@@ -14,26 +14,26 @@ FULL EDUCATIONAL TRADING BOT & BACKTEST ENGINE (END-TO-END, บทที่ 1 - 
   มิใช่การแนะนำการลงทุน ผู้ลงทุนโปรดศึกษาข้อมูลและความเสี่ยงด้วยตนเอง
 
 คุณสมบัติครบทั้ง 6 เสาหลักในไฟล์เดียว (พร้อมอัปเดตตาม 8 มาตรการการซื้อขายของตลาดหลักทรัพย์ฯ SET):
-  1. Point-in-Time Data Engine & Data Hygiene Audit (บทที่ 3 - 5)
+  1. Point-in-Time Data Engine & Data Hygiene Audit (บทที่ 2 - 3)
      - ตรวจสอบข้อมูลซ้ำ/แหว่ง, ป้องกัน Look-Ahead Bias (ใช้ข้อมูล T-1 ส่งคำสั่งที่ราคาเปิด/VWAP วัน T)
-  2. Market Regime Detector & Markov Transition Filter (บทที่ 10)
+  2. Market Regime Detector & Markov Transition Filter (บทที่ 4)
      - คำนวณ Kaufman Efficiency Ratio (ER 20) + Volatility Z-Score (20d/252d)
      - แยกสภาวะตลาดเป็น BULL_TREND, SIDEWAYS_QUIET, CRISIS_PANIC
-  3. Starter 3-Agent Ensemble & 3-Layer Signal Filter (บทที่ 7 & 11)
+  3. Starter 3-Agent Ensemble & 3-Layer Signal Filter (บทที่ 4)
      - Agent 1: Trend-Following (EMA 20/50 + KAMA)
      - Agent 2: Mean-Reversion (RSI 14 + Bollinger %B บนหุ้นขาขึ้นใหญ่ SMA 200)
      - Agent 3: Cash & Volatility Shield (เกราะป้องกันความผันผวน)
      - ตัวกรอง 3 ชั้น: สภาวะตลาดรวม + โมเมนตัมเทียบดัชนี + Volume Participation
-  4. Position Context Manager & Ratchet Trailing Stop (บทที่ 8)
+  4. Position Context Manager & Ratchet Trailing Stop (บทที่ 5)
      - บันทึกเหตุผลการเข้าซื้อ (Thesis Tagging) แยกกฎการถือและจุดตัดขาดทุนตามกลยุทธ์
      - ระบบล็อกกำไรขั้นบันได (Breakeven Lock ที่ +1.5R และ Profit Ratchet ที่ +3.0R)
-  5. Portfolio Risk Engine, HRP Allocation & Two-Bucket Profit Skimming (บทที่ 6, 9, 12)
+  5. Portfolio Risk Engine, HRP Allocation & Two-Bucket Profit Skimming (บทที่ 5 & 8)
      - คำนวณขนาดไม้ตามความผันผวน (1% Risk per Trade ด้วย ATR 14)
      - เพดานความเสี่ยงพอร์ตรวม (Max Portfolio Heat 5.0%)
      - จัดสรรน้ำหนักด้วย Hierarchical Risk Parity (HRP) ลดความเสี่ยงหุ้นวิ่งตามกัน
      - 3-Tier Drawdown Circuit Breaker (-5% ลดขนาดไม้ครึ่งหนึ่ง, -8% หยุดซื้อเพิ่ม, -10% ถอยถือเงินสด)
      - Two-Bucket System: ตักกำไร 30% เข้าถังเงินออมปลอดภัยทุกครั้งที่พอร์ตทำ New High เกินขั้นละ +10%
-  6. Walk-Forward Validation, SET 8 Trading Measures & Smart TWAP/VWAP Execution (บทที่ 1, 6, 13, 14)
+  6. Walk-Forward Validation, SET 8 Trading Measures & Smart TWAP/VWAP Execution (บทที่ 1, 3, 6 & 8)
      - ทดสอบ Walk-Forward Efficiency (WFE) วัดความเสถียร In-Sample vs Out-of-Sample
      - รองรับ 8 มาตรการการซื้อขายของ SET (Tick Size ใหม่ช่วง 5-50 บาท = 0.02/0.05/0.10, Zero-Plus/Uptick Short Rule, OTR Guard)
      - จำลองแผนส่งคำสั่งซื้อขายระดับจุลภาค (Micro-Price, OBI, Spread Guard, TWAP Jitter)
@@ -61,14 +61,14 @@ import pandas as pd
 @dataclass(frozen=True)
 class QuantConfig:
     initial_capital: float = 1_000_000.0      # เงินทุนเริ่มต้น 1,000,000 บาท
-    risk_per_trade_pct: float = 0.030         # ความเสี่ยงต่อไม้ 3.0% ของพอร์ตตามความผันผวน ATR (บทที่ 9)
-    max_portfolio_heat_pct: float = 0.15      # เพดานความเสี่ยงรวมสูงสุดของพอร์ต (บทที่ 9)
+    risk_per_trade_pct: float = 0.030         # ความเสี่ยงต่อไม้ 3.0% ของพอร์ตตามความผันผวน ATR (บทที่ 5)
+    max_portfolio_heat_pct: float = 0.15      # เพดานความเสี่ยงรวมสูงสุดของพอร์ต (บทที่ 5)
     max_single_weight_pct: float = 0.34       # น้ำหนักหุ้นรายตัวสูงสุดไม่เกิน 34% ของพอร์ต
-    commission_vat_rate: float = 0.00157      # ค่าคอมมิชชัน + VAT ตลาดหุ้นไทย (~0.157% ต่อขา)
-    base_slippage_bps: float = 10.0           # ค่า Slippage พื้นฐาน 10 bps (0.10%)
-    board_lot: int = 100                      # หน่วยซื้อขายขั้นต่ำตลาดหุ้นไทย (100 หุ้น)
+    commission_vat_rate: float = 0.00157      # ค่าคอมมิชชัน + VAT ตลาดหุ้นไทย (~0.157% ต่อขา — บทที่ 1)
+    base_slippage_bps: float = 10.0           # ค่า Slippage พื้นฐาน 10 bps (0.10% — บทที่ 1 & 6)
+    board_lot: int = 100                      # หน่วยซื้อขายขั้นต่ำตลาดหุ้นไทย (100 หุ้น — บทที่ 5 & 6)
 
-    # พารามิเตอร์ตัวชี้วัดมาตรฐาน (บทที่ 7, 10, 11)
+    # พารามิเตอร์ตัวชี้วัดมาตรฐาน (บทที่ 4)
     ema_fast: int = 20
     ema_slow: int = 50
     sma_long: int = 150
@@ -78,13 +78,13 @@ class QuantConfig:
     vol_short_window: int = 20
     vol_long_window: int = 120
 
-    # พารามิเตอร์ตัดขาดทุนและล็อกกำไร (บทที่ 8)
+    # พารามิเตอร์ตัดขาดทุนและล็อกกำไร (บทที่ 5)
     trend_atr_stop_mult: float = 3.8          # ระยะ Trailing Stop สำหรับ Trend-Following (3.8 ATR)
     mr_atr_stop_mult: float = 2.5             # ระยะ Stop Loss สำหรับ Mean-Reversion (2.5 ATR)
     breakeven_r_trigger: float = 1.5          # ขยับ Stop บังทุนเมื่อกำไรแตะ +1.5R
     ratchet_r_trigger: float = 3.5            # บีบ Trailing Stop แน่นขึ้นเมื่อกำไรแตะ +3.5R
 
-    # พารามิเตอร์ Circuit Breaker & Two-Bucket (บทที่ 9 & 12)
+    # พารามิเตอร์ Circuit Breaker & Two-Bucket (บทที่ 5 & 8)
     dd_tier1_reduce_size: float = -0.05       # Drawdown -5%: ลดขนาดไม้ลง 50%
     dd_tier2_halt_buys: float = -0.08         # Drawdown -8%: หยุดเปิดสถานะซื้อใหม่
     dd_tier3_panic_shield: float = -0.10      # Drawdown -10%: เปิดเกราะป้องกันพอร์ต
@@ -184,10 +184,17 @@ def generate_sample_thai_ohlcv_csv(csv_path: str, n_days: int = 500, seed: int =
 
 
 # =========================================================================================
-# 2. DATA ENGINE & POINT-IN-TIME FEATURE PIPELINE (บทที่ 3, 4, 5, 7, 10)
+# 2. DATA ENGINE & POINT-IN-TIME FEATURE PIPELINE (บทที่ 2, 3 & 4)
 # =========================================================================================
+# [หมายเหตุสำหรับระบบใช้งานจริง - การเชื่อมต่อข้อมูลราคาตลาดจริง (Real Market Data Note)]:
+#   ในห้องแล็บนี้เราโหลดข้อมูลจากไฟล์ CSV (sample_thai_stocks_ohlcv.csv) เพื่อให้รันออฟไลน์ได้ทันที
+#   แต่หากต้องการนำไปต่อข้อมูลจริง คุณสามารถเปลี่ยนเฉพาะส่วนโหลด raw_df ไปดึงจาก:
+#     1) ไลบรารี yfinance (เช่น yf.download("ADVANC.BK", period="2y")) สำหรับข้อมูลรายวัน
+#     2) Settrade Open API v2 (investor.MarketData().get_candlestick(...)) สำหรับข้อมูลเรียลไทม์/รายนาที
+#     3) ฐานข้อมูล SETSMART หรือไฟล์ CSV ที่ส่งออกจากโปรแกรมกราฟ
+#   โดยยังคงส่งข้อมูลผ่านฟังก์ชัน prepare_point_in_time_features() ด้านล่างนี้เพื่อกรองข้อมูลเสียเหมือนเดิม
 def compute_kama(series: pd.Series, er_period: int = 10, fast_period: int = 2, slow_period: int = 30) -> pd.Series:
-    """คำนวณเส้นค่าเฉลี่ยปรับตัวอัตโนมัติ Kaufman's Adaptive Moving Average (KAMA - บทที่ 7)"""
+    """คำนวณเส้นค่าเฉลี่ยปรับตัวอัตโนมัติ Kaufman's Adaptive Moving Average (KAMA - บทที่ 4)"""
     values = series.to_numpy(dtype=float)
     kama = np.full_like(values, np.nan)
     if len(values) <= er_period:
@@ -221,7 +228,7 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
     valid_mask = (df["close"] > 0) & (df["open"] > 0) & (df["high"] >= df["low"]) & (df["volume"] >= 0)
     df = df.loc[valid_mask].copy()
 
-    # แยกข้อมูลดัชนีตลาดรวม (SET_INDEX) เพื่อใช้คำนวณ Market Regime (บทที่ 10)
+    # แยกข้อมูลดัชนีตลาดรวม (SET_INDEX) เพื่อใช้คำนวณ Market Regime (บทที่ 4)
     idx_df = df[df["symbol"] == "SET_INDEX"].sort_values("date").set_index("date").copy()
     if idx_df.empty:
         raise ValueError("ไม่พบข้อมูล SET_INDEX ในไฟล์ CSV สำหรับประเมินสภาวะตลาดรวม")
@@ -238,7 +245,7 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
     idx_df["vol_z"] = ((vol_20 - vol_mean) / vol_std).fillna(0.0)
     idx_df["sma_50"] = idx_df["close"].rolling(50).mean()
 
-    # จำแนกสภาวะตลาดรวม (Regime Detector + Markov Persistence Smoothing - บทที่ 10)
+    # จำแนกสภาวะตลาดรวม (Regime Detector + Markov Persistence Smoothing - บทที่ 4)
     regimes: List[str] = []
     prev_regime = "SIDEWAYS_QUIET"
     for dt, row in idx_df.iterrows():
@@ -266,7 +273,7 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
 
     idx_df["regime"] = regimes
 
-    # คำนวณอินดิเคเตอร์ของหุ้นรายตัวแต่ละตัว (บทที่ 7 & 11)
+    # คำนวณอินดิเคเตอร์ของหุ้นรายตัวแต่ละตัว (บทที่ 4)
     stock_Map: Dict[str, pd.DataFrame] = {}
     for sym, grp in df[df["symbol"] != "SET_INDEX"].groupby("symbol"):
         s = grp.sort_values("date").set_index("date").copy()
@@ -277,14 +284,14 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
         s["sma_long"] = s["close"].rolling(cfg.sma_long, min_periods=50).mean()
         s["kama"] = compute_kama(s["close"], er_period=10, fast_period=2, slow_period=30)
 
-        # ATR (14) สำหรับวัดความผันผวนและกำหนดขนาดไม้ (บทที่ 8 & 9)
+        # ATR (14) สำหรับวัดความผันผวนและกำหนดขนาดไม้ (บทที่ 4 & 5)
         high_low = s["high"] - s["low"]
         high_pc = (s["high"] - s["close"].shift(1)).abs()
         low_pc = (s["low"] - s["close"].shift(1)).abs()
         tr = pd.concat([high_low, high_pc, low_pc], axis=1).max(axis=1)
         s["atr"] = tr.rolling(cfg.atr_period, min_periods=5).mean()
 
-        # RSI (14) และ Bollinger %B สำหรับกลยุทธ์สลับฟันปลา Mean-Reversion (บทที่ 7)
+        # RSI (14) และ Bollinger %B สำหรับกลยุทธ์สลับฟันปลา Mean-Reversion (บทที่ 4)
         delta = s["close"].diff()
         gain = delta.clip(lower=0.0).rolling(cfg.rsi_period, min_periods=5).mean()
         loss = (-delta.clip(upper=0.0)).rolling(cfg.rsi_period, min_periods=5).mean()
@@ -305,11 +312,11 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
 
 
 # =========================================================================================
-# 3. HIERARCHICAL RISK PARITY (HRP) ALLOCATOR (บทที่ 12)
+# 3. HIERARCHICAL RISK PARITY (HRP) ALLOCATOR (บทที่ 5)
 # =========================================================================================
 def compute_hrp_weights(returns_window: pd.DataFrame, max_weight: float = 0.25) -> Dict[str, float]:
     """
-    คำนวณน้ำหนักการลงทุนตามหลัก Hierarchical Risk Parity (HRP - บทที่ 12)
+    คำนวณน้ำหนักการลงทุนตามหลัก Hierarchical Risk Parity (HRP - บทที่ 5)
     จัดลำดับสินทรัพย์ตามความสัมพันธ์ (Correlation Clustering) และแบ่งน้ำหนักแบบ Inverse-Variance Bisection
     """
     clean_ret = returns_window.dropna(how="all", axis=1).fillna(0.0)
@@ -371,7 +378,7 @@ def compute_hrp_weights(returns_window: pd.DataFrame, max_weight: float = 0.25) 
 
 
 # =========================================================================================
-# 4. POSITION CONTEXT MANAGER & RATCHET TRAILING STOP (บทที่ 8)
+# 4. POSITION CONTEXT MANAGER & RATCHET TRAILING STOP (บทที่ 5)
 # =========================================================================================
 @dataclass
 class OpenPosition:
@@ -395,7 +402,7 @@ def update_position_stop_and_check_exit(
     cfg: QuantConfig,
 ) -> Tuple[bool, str]:
     """
-    ตรวจสอบเงื่อนไขการขายออกและอัปเดตจุดตัดขาดทุนยกระดับตามหลังราคา (Ratchet Trailing Stop - บทที่ 8)
+    ตรวจสอบเงื่อนไขการขายออกและอัปเดตจุดตัดขาดทุนยกระดับตามหลังราคา (Ratchet Trailing Stop - บทที่ 5)
     โดยใช้ข้อมูล ณ สิ้นวัน T-1 เพื่อตัดสินใจส่งคำสั่งขายที่ราคาเปิดของวัน T (ไร้ Look-Ahead Bias)
     """
     close_p = float(row_t_minus_1["close"])
@@ -438,7 +445,7 @@ def update_position_stop_and_check_exit(
 
 
 # =========================================================================================
-# 5. STARTER 3-AGENT ENSEMBLE & 3-LAYER SIGNAL FILTER (บทที่ 7 & 11)
+# 5. STARTER 3-AGENT ENSEMBLE & 3-LAYER SIGNAL FILTER (บทที่ 4)
 # =========================================================================================
 def evaluate_3_agent_ensemble_signal(
     sym: str,
@@ -447,7 +454,7 @@ def evaluate_3_agent_ensemble_signal(
     regime: str,
 ) -> Tuple[bool, str, float]:
     """
-    ระบบ 3 เอเจนต์ร่วมตัดสินใจ (Starter 3-Agent Ensemble - บทที่ 11)
+    ระบบ 3 เอเจนต์ร่วมตัดสินใจ (Starter 3-Agent Ensemble - บทที่ 4)
     ผสานตัวกรองสัญญาณ 3 ชั้น (3-Layer Confirmation Filter):
       ชั้นที่ 1: สภาวะตลาดรวม (Macro Regime Guard)
       ชั้นที่ 2: ความแข็งแกร่งเทียบตลาด (Relative Momentum vs SET_INDEX)
@@ -498,7 +505,7 @@ def evaluate_3_agent_ensemble_signal(
 
 
 # =========================================================================================
-# 6. BACKTEST ENGINE & TWO-BUCKET PORTFOLIO SIMULATOR (บทที่ 5, 6, 8, 9, 12)
+# 6. BACKTEST ENGINE & TWO-BUCKET PORTFOLIO SIMULATOR (บทที่ 2, 3, 5 & 8)
 # =========================================================================================
 @dataclass
 class TradeRecord:
@@ -612,7 +619,7 @@ def run_point_in_time_backtest(
             )
 
         # ---------------------------------------------------------------------------------
-        # ขั้นที่ 2: ประเมิน Drawdown Circuit Breaker ณ สิ้นวัน T-1 (บทที่ 9)
+        # ขั้นที่ 2: ประเมิน Drawdown Circuit Breaker ณ สิ้นวัน T-1 (บทที่ 5 & 8)
         # ---------------------------------------------------------------------------------
         mkt_val_prev = sum(
             pos.shares * float(stock_map[sym].loc[dt_prev, "close"])
@@ -635,7 +642,7 @@ def run_point_in_time_backtest(
             risk_scale = 0.50  # ลดขนาดไม้ลงครึ่งหนึ่งเมื่อพอร์ตย่อเกิน -5%
 
         # ---------------------------------------------------------------------------------
-        # ขั้นที่ 3: คัดกรองสัญญาณซื้อจาก 3-Agent Ensemble + จัดสรรน้ำหนัก HRP (บทที่ 11 & 12)
+        # ขั้นที่ 3: คัดกรองสัญญาณซื้อจาก 3-Agent Ensemble + จัดสรรน้ำหนัก HRP (บทที่ 4 & 5)
         # ---------------------------------------------------------------------------------
         if allow_new_buys and regime_prev != "CRISIS_PANIC":
             candidates: List[Tuple[str, str, float]] = []
@@ -716,7 +723,7 @@ def run_point_in_time_backtest(
                     )
 
         # ---------------------------------------------------------------------------------
-        # ขั้นที่ 4: คำนวณมูลค่าพอร์ตสิ้นวัน T และระบบตักกำไรเข้าถังปลอดภัย (Two-Bucket - บทที่ 12)
+        # ขั้นที่ 4: คำนวณมูลค่าพอร์ตสิ้นวัน T และระบบตักกำไรเข้าถังปลอดภัย (Two-Bucket - บทที่ 5 & 8)
         # ---------------------------------------------------------------------------------
         mkt_val_close = sum(
             pos.shares * float(stock_map[sym].loc[dt_now, "close"])
@@ -790,7 +797,7 @@ def run_point_in_time_backtest(
 
 
 # =========================================================================================
-# 7. WALK-FORWARD EFFICIENCY (WFE) VALIDATOR (บทที่ 6)
+# 7. WALK-FORWARD EFFICIENCY (WFE) VALIDATOR (บทที่ 3)
 # =========================================================================================
 def run_walk_forward_check(
     stock_map: Dict[str, pd.DataFrame],
@@ -799,7 +806,7 @@ def run_walk_forward_check(
 ) -> Tuple[float, float, float]:
     """
     แบ่งข้อมูลออกเป็นช่วงฝึกสอน (In-Sample 60% แรก) และช่วงทดสอบนอกกลุ่มตัวอย่าง (Out-of-Sample 40% หลัง)
-    เพื่อคำนวณ Walk-Forward Efficiency (WFE - บทที่ 6) ป้องกันการแต่งกราฟย้อนหลัง (Overfitting)
+    เพื่อคำนวณ Walk-Forward Efficiency (WFE - บทที่ 3) ป้องกันการแต่งกราฟย้อนหลัง (Overfitting)
     """
     n_total = len(idx_df)
     split_idx = int(n_total * 0.60)
@@ -813,8 +820,14 @@ def run_walk_forward_check(
 
 
 # =========================================================================================
-# 8. SET 8 TRADING MEASURES & SMART TWAP / VWAP ORDER EXECUTION PLANNER (บทที่ 1, 13 & 14)
+# 8. SET 8 TRADING MEASURES & SMART TWAP / VWAP ORDER EXECUTION PLANNER (บทที่ 1, 6 & 8)
 # =========================================================================================
+# [หมายเหตุสำหรับระบบใช้งานจริง - การเชื่อมต่อโบรกเกอร์ส่งคำสั่งซื้อขายจริง (Real Broker Execution Note)]:
+#   ในห้องแล็บนี้ฟังก์ชัน generate_smart_execution_plan() ทำหน้าที่คำนวณและสร้าง "ใบแผนคำสั่งซื้อขายจำลอง"
+#   แต่หากต้องการเชื่อมต่อโบรกเกอร์จริง (เช่น Settrade Open API v2 สำหรับหุ้นไทย/TFEX)
+#   คุณสามารถนำรายการไม้ย่อย (slices) ที่ผ่านการปัดเศษ Tick Size และ Board Lot (100 หุ้น) แล้ว
+#   ไปส่งผ่าน SDK ของโบรกเกอร์ (`investor.Equity(account_no=...).place_order(...)`) ได้โดยตรง
+#   โดยต้องตรวจรหัสกันส่งซ้ำ (Idempotent Key) และตรวจยอดพอร์ต (Reconciliation) ตามบทที่ 8 ก่อนยิงคำสั่งเสมอ
 def get_set_tick_size(price: float) -> float:
     """
     คืนค่าขนาดช่องราคา (Tick Size) ตามเกณฑ์ 8 มาตรการการซื้อขายของตลาดหลักทรัพย์ฯ (SET 795-eight-trading-measures)
@@ -906,7 +919,7 @@ def generate_smart_execution_plan(
     seed: int = 7,
 ) -> Dict[str, object]:
     """
-    จำลองสมองกลส่งคำสั่งซื้อขายอัจฉริยะ (Smart Execution Engine - บทที่ 13 & 14):
+    จำลองสมองกลส่งคำสั่งซื้อขายอัจฉริยะ (Smart Execution Engine - บทที่ 6):
       - คำนวณขนาดช่องราคา (SET Tick Size ตามเกณฑ์ 8 มาตรการใหม่), OBI และราคาจุลภาค (Micro-Price)
       - ตรวจสอบ Spread Guard (บล็อกคำสั่งหาก Bid-Ask Spread กว้างผิดปกติเกิน 40 bps)
       - หั่นคำสั่งซื้อก้อนใหญ่เป็นไม้น้อยๆ ด้วย TWAP + Randomized Time Jitter
@@ -1121,7 +1134,7 @@ def save_backtest_comparison_chart(
     idx_df: pd.DataFrame,
     out_path: str,
 ) -> None:
-    """สร้างกราฟเปรียบเทียบผลลัพธ์ Backtest ระหว่าง The Secret Quant Bot vs Normal Bot vs Market Index"""
+    """สร้างกราฟเปรียบเทียบผลลัพธ์ Backtest ระหว่าง Disciplined Quant Bot (ครบ 8 บท) vs Normal Bot vs Market Index"""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -1262,28 +1275,28 @@ def main() -> None:
 
     # สรุปสัดส่วนสภาวะตลาด (Market Regimes)
     regime_counts = idx_df["regime"].value_counts()
-    print("\n[2/6] ผลการจำแนกสภาวะตลาดรวม (Market Regime Detector - บทที่ 10):")
+    print("\n[2/6] ผลการจำแนกสภาวะตลาดรวม (Market Regime Detector - บทที่ 4):")
     for reg_name in ["BULL_TREND", "SIDEWAYS_QUIET", "CRISIS_PANIC"]:
         cnt = int(regime_counts.get(reg_name, 0))
         pct = (cnt / len(idx_df)) * 100.0
         print(f"      - {reg_name:<16}: {cnt:>3} วันทำการ ({pct:>5.1f}%)")
 
-    # คำนวณน้ำหนัก HRP ล่าสุด (บทที่ 12)
+    # คำนวณน้ำหนัก HRP ล่าสุด (บทที่ 5)
     latest_ret_df = pd.DataFrame({sym: sdf["ret_1d"].tail(60) for sym, sdf in stock_map.items()})
     hrp_weights = compute_hrp_weights(latest_ret_df, max_weight=cfg.max_single_weight_pct)
-    print("\n[3/6] สัดส่วนพอร์ตไร้ความเสี่ยงกระจุกตัว (Hierarchical Risk Parity - บทที่ 12):")
+    print("\n[3/6] สัดส่วนพอร์ตไร้ความเสี่ยงกระจุกตัว (Hierarchical Risk Parity - บทที่ 5):")
     for sym, w in sorted(hrp_weights.items(), key=lambda x: x[1], reverse=True):
         print(f"      - {sym:<12}: {w * 100.0:>5.2f}%")
 
-    # ทดสอบความเสถียรนอกกลุ่มตัวอย่าง (Walk-Forward Validation - บทที่ 6)
+    # ทดสอบความเสถียรนอกกลุ่มตัวอย่าง (Walk-Forward Validation - บทที่ 3)
     is_cagr, oos_cagr, wfe_pct = run_walk_forward_check(stock_map, idx_df, cfg)
     wfe_status = "ผ่านเกณฑ์มาตรฐาน (Robust >= 50%)" if wfe_pct >= 50.0 else "ควรระวัง Overfitting"
-    print("\n[4/6] ผลทดสอบ Walk-Forward Validation (บทที่ 6):")
+    print("\n[4/6] ผลทดสอบ Walk-Forward Validation (บทที่ 3):")
     print(f"      - In-Sample CAGR (60% แรก)     : {is_cagr:>6.2f}% ต่อปี")
     print(f"      - Out-of-Sample CAGR (40% หลัง): {oos_cagr:>6.2f}% ต่อปี")
     print(f"      - Walk-Forward Efficiency (WFE): {wfe_pct:>6.1f}% -> [{wfe_status}]")
 
-    # รัน Backtest เต็มรูปแบบ (บทที่ 5, 7, 8, 9, 11, 12) และเปรียบเทียบกับบอททั่วไป (Normal Bot)
+    # รัน Backtest เต็มรูปแบบ (บทที่ 2, 3, 4, 5 & 8) และเปรียบเทียบกับบอททั่วไป (Normal Bot)
     summary = run_point_in_time_backtest(stock_map, idx_df, cfg, start_idx=60)
     normal_summary = run_normal_generic_bot_backtest(stock_map, idx_df, cfg, start_idx=60)
     chart_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backtest_comparison_chart.png")
@@ -1314,7 +1327,7 @@ def main() -> None:
                 f"PnL: {tr.net_pnl:>+9,.2f} บาท ({tr.r_multiple:>+4.2f}R) | {tr.exit_reason}"
             )
 
-    # จำลองการวางแผนส่งคำสั่งซื้อด้วย Smart TWAP / Micro-Price (บทที่ 13 & 14)
+    # จำลองการวางแผนส่งคำสั่งซื้อด้วย Smart TWAP / Micro-Price (บทที่ 6)
     sample_sym = sorted(stock_map.keys())[0]
     last_close = float(stock_map[sample_sym]["close"].iloc[-1])
     exec_plan = generate_smart_execution_plan(
@@ -1327,7 +1340,7 @@ def main() -> None:
         ask_vol=42_000,
         n_slices=4,
     )
-    print(f"\n[6/6] ตัวอย่างแผนส่งคำสั่งซื้ออัจฉริยะ (Smart TWAP & Micro-Price - บทที่ 13 & 14) สำหรับ {sample_sym}:")
+    print(f"\n[6/6] ตัวอย่างแผนส่งคำสั่งซื้ออัจฉริยะ (Smart TWAP & Micro-Price - บทที่ 6) สำหรับ {sample_sym}:")
     print(
         f"      - ราคาอ้างอิง: {exec_plan['ref_price']:.2f} บาท | "
         f"Spread: {exec_plan['spread_bps']:.1f} bps | "

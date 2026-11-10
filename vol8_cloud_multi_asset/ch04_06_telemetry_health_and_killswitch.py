@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-The Secret Quant: 8-Volume Masterclass Series
-เล่มที่ 8: การวางระบบ Cloud Production 24/7 และการขยายสู่ TFEX / หุ้นนอก (Cloud Ops & Multi-Asset)
+หนังสือ: เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python
+บทที่ 8: การวางระบบ Cloud Production 24/7 และการขยายสู่ TFEX / หุ้นนอก (Cloud Ops & Multi-Asset)
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
-รวมซอร์สโค้ดครบทุกบทประจำเล่มที่ 8 พร้อมรันทดสอบได้ทันที
+รวมซอร์สโค้ดครบทุกหัวข้อประจำบทที่ 8 พร้อมรันทดสอบได้ทันที
 """
 
 from __future__ import annotations

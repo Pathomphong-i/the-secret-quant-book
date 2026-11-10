@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 =========================================================================================
-The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น
-FULL EDUCATIONAL TRADING BOT & BACKTEST ENGINE (END-TO-END, บทที่ 1 - บทที่ 14)
+เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น
+FULL EDUCATIONAL TRADING BOT & BACKTEST ENGINE (END-TO-END, บทที่ 1 - บทที่ 1)
 =========================================================================================
 ไฟล์นี้คือระบบ Quantitative Trading แบบครบวงจร (Full Working Version) สำหรับประกอบหนังสือ
-"The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น"
+"เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น"
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
 
 คำเตือน:
@@ -16,7 +16,7 @@ FULL EDUCATIONAL TRADING BOT & BACKTEST ENGINE (END-TO-END, บทที่ 1 - 
 คุณสมบัติครบทั้ง 6 เสาหลักในไฟล์เดียว (พร้อมอัปเดตตาม 8 มาตรการการซื้อขายของตลาดหลักทรัพย์ฯ SET):
   1. Point-in-Time Data Engine & Data Hygiene Audit (บทที่ 3 - 5)
      - ตรวจสอบข้อมูลซ้ำ/แหว่ง, ป้องกัน Look-Ahead Bias (ใช้ข้อมูล T-1 ส่งคำสั่งที่ราคาเปิด/VWAP วัน T)
-  2. Market Regime Detector & Markov Transition Filter (บทที่ 10)
+  2. Market Regime Detector & Markov Transition Filter (บทที่ 1)
      - คำนวณ Kaufman Efficiency Ratio (ER 20) + Volatility Z-Score (20d/252d)
      - แยกสภาวะตลาดเป็น BULL_TREND, SIDEWAYS_QUIET, CRISIS_PANIC
   3. Starter 3-Agent Ensemble & 3-Layer Signal Filter (บทที่ 7 & 11)
@@ -61,8 +61,8 @@ import pandas as pd
 @dataclass(frozen=True)
 class QuantConfig:
     initial_capital: float = 1_000_000.0      # เงินทุนเริ่มต้น 1,000,000 บาท
-    risk_per_trade_pct: float = 0.030         # ความเสี่ยงต่อไม้ 3.0% ของพอร์ตตามความผันผวน ATR (บทที่ 9)
-    max_portfolio_heat_pct: float = 0.15      # เพดานความเสี่ยงรวมสูงสุดของพอร์ต (บทที่ 9)
+    risk_per_trade_pct: float = 0.030         # ความเสี่ยงต่อไม้ 3.0% ของพอร์ตตามความผันผวน ATR (บทที่ 1)
+    max_portfolio_heat_pct: float = 0.15      # เพดานความเสี่ยงรวมสูงสุดของพอร์ต (บทที่ 1)
     max_single_weight_pct: float = 0.34       # น้ำหนักหุ้นรายตัวสูงสุดไม่เกิน 34% ของพอร์ต
     commission_vat_rate: float = 0.00157      # ค่าคอมมิชชัน + VAT ตลาดหุ้นไทย (~0.157% ต่อขา)
     base_slippage_bps: float = 10.0           # ค่า Slippage พื้นฐาน 10 bps (0.10%)
@@ -84,7 +84,7 @@ class QuantConfig:
     breakeven_r_trigger: float = 1.5          # ขยับ Stop บังทุนเมื่อกำไรแตะ +1.5R
     ratchet_r_trigger: float = 3.5            # บีบ Trailing Stop แน่นขึ้นเมื่อกำไรแตะ +3.5R
 
-    # พารามิเตอร์ Circuit Breaker & Two-Bucket (บทที่ 9 & 12)
+    # พารามิเตอร์ Circuit Breaker & Two-Bucket (บทที่ 5)
     dd_tier1_reduce_size: float = -0.05       # Drawdown -5%: ลดขนาดไม้ลง 50%
     dd_tier2_halt_buys: float = -0.08         # Drawdown -8%: หยุดเปิดสถานะซื้อใหม่
     dd_tier3_panic_shield: float = -0.10      # Drawdown -10%: เปิดเกราะป้องกันพอร์ต
@@ -221,7 +221,7 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
     valid_mask = (df["close"] > 0) & (df["open"] > 0) & (df["high"] >= df["low"]) & (df["volume"] >= 0)
     df = df.loc[valid_mask].copy()
 
-    # แยกข้อมูลดัชนีตลาดรวม (SET_INDEX) เพื่อใช้คำนวณ Market Regime (บทที่ 10)
+    # แยกข้อมูลดัชนีตลาดรวม (SET_INDEX) เพื่อใช้คำนวณ Market Regime (บทที่ 1)
     idx_df = df[df["symbol"] == "SET_INDEX"].sort_values("date").set_index("date").copy()
     if idx_df.empty:
         raise ValueError("ไม่พบข้อมูล SET_INDEX ในไฟล์ CSV สำหรับประเมินสภาวะตลาดรวม")
@@ -238,7 +238,7 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
     idx_df["vol_z"] = ((vol_20 - vol_mean) / vol_std).fillna(0.0)
     idx_df["sma_50"] = idx_df["close"].rolling(50).mean()
 
-    # จำแนกสภาวะตลาดรวม (Regime Detector + Markov Persistence Smoothing - บทที่ 10)
+    # จำแนกสภาวะตลาดรวม (Regime Detector + Markov Persistence Smoothing - บทที่ 1)
     regimes: List[str] = []
     prev_regime = "SIDEWAYS_QUIET"
     for dt, row in idx_df.iterrows():
@@ -305,11 +305,11 @@ def prepare_point_in_time_features(raw_df: pd.DataFrame, cfg: QuantConfig) -> Tu
 
 
 # =========================================================================================
-# 3. HIERARCHICAL RISK PARITY (HRP) ALLOCATOR (บทที่ 12)
+# 3. HIERARCHICAL RISK PARITY (HRP) ALLOCATOR (บทที่ 1)
 # =========================================================================================
 def compute_hrp_weights(returns_window: pd.DataFrame, max_weight: float = 0.25) -> Dict[str, float]:
     """
-    คำนวณน้ำหนักการลงทุนตามหลัก Hierarchical Risk Parity (HRP - บทที่ 12)
+    คำนวณน้ำหนักการลงทุนตามหลัก Hierarchical Risk Parity (HRP - บทที่ 1)
     จัดลำดับสินทรัพย์ตามความสัมพันธ์ (Correlation Clustering) และแบ่งน้ำหนักแบบ Inverse-Variance Bisection
     """
     clean_ret = returns_window.dropna(how="all", axis=1).fillna(0.0)
@@ -447,7 +447,7 @@ def evaluate_3_agent_ensemble_signal(
     regime: str,
 ) -> Tuple[bool, str, float]:
     """
-    ระบบ 3 เอเจนต์ร่วมตัดสินใจ (Starter 3-Agent Ensemble - บทที่ 11)
+    ระบบ 3 เอเจนต์ร่วมตัดสินใจ (Starter 3-Agent Ensemble - บทที่ 1)
     ผสานตัวกรองสัญญาณ 3 ชั้น (3-Layer Confirmation Filter):
       ชั้นที่ 1: สภาวะตลาดรวม (Macro Regime Guard)
       ชั้นที่ 2: ความแข็งแกร่งเทียบตลาด (Relative Momentum vs SET_INDEX)
@@ -612,7 +612,7 @@ def run_point_in_time_backtest(
             )
 
         # ---------------------------------------------------------------------------------
-        # ขั้นที่ 2: ประเมิน Drawdown Circuit Breaker ณ สิ้นวัน T-1 (บทที่ 9)
+        # ขั้นที่ 2: ประเมิน Drawdown Circuit Breaker ณ สิ้นวัน T-1 (บทที่ 1)
         # ---------------------------------------------------------------------------------
         mkt_val_prev = sum(
             pos.shares * float(stock_map[sym].loc[dt_prev, "close"])
@@ -635,7 +635,7 @@ def run_point_in_time_backtest(
             risk_scale = 0.50  # ลดขนาดไม้ลงครึ่งหนึ่งเมื่อพอร์ตย่อเกิน -5%
 
         # ---------------------------------------------------------------------------------
-        # ขั้นที่ 3: คัดกรองสัญญาณซื้อจาก 3-Agent Ensemble + จัดสรรน้ำหนัก HRP (บทที่ 11 & 12)
+        # ขั้นที่ 3: คัดกรองสัญญาณซื้อจาก 3-Agent Ensemble + จัดสรรน้ำหนัก HRP (บทที่ 4 & 5)
         # ---------------------------------------------------------------------------------
         if allow_new_buys and regime_prev != "CRISIS_PANIC":
             candidates: List[Tuple[str, str, float]] = []
@@ -716,7 +716,7 @@ def run_point_in_time_backtest(
                     )
 
         # ---------------------------------------------------------------------------------
-        # ขั้นที่ 4: คำนวณมูลค่าพอร์ตสิ้นวัน T และระบบตักกำไรเข้าถังปลอดภัย (Two-Bucket - บทที่ 12)
+        # ขั้นที่ 4: คำนวณมูลค่าพอร์ตสิ้นวัน T และระบบตักกำไรเข้าถังปลอดภัย (Two-Bucket - บทที่ 1)
         # ---------------------------------------------------------------------------------
         mkt_val_close = sum(
             pos.shares * float(stock_map[sym].loc[dt_now, "close"])
@@ -906,7 +906,7 @@ def generate_smart_execution_plan(
     seed: int = 7,
 ) -> Dict[str, object]:
     """
-    จำลองสมองกลส่งคำสั่งซื้อขายอัจฉริยะ (Smart Execution Engine - บทที่ 13 & 14):
+    จำลองสมองกลส่งคำสั่งซื้อขายอัจฉริยะ (Smart Execution Engine - บทที่ 6):
       - คำนวณขนาดช่องราคา (SET Tick Size ตามเกณฑ์ 8 มาตรการใหม่), OBI และราคาจุลภาค (Micro-Price)
       - ตรวจสอบ Spread Guard (บล็อกคำสั่งหาก Bid-Ask Spread กว้างผิดปกติเกิน 40 bps)
       - หั่นคำสั่งซื้อก้อนใหญ่เป็นไม้น้อยๆ ด้วย TWAP + Randomized Time Jitter
@@ -1121,7 +1121,7 @@ def save_backtest_comparison_chart(
     idx_df: pd.DataFrame,
     out_path: str,
 ) -> None:
-    """สร้างกราฟเปรียบเทียบผลลัพธ์ Backtest ระหว่าง The Secret Quant Bot vs Normal Bot vs Market Index"""
+    """สร้างกราฟเปรียบเทียบผลลัพธ์ Backtest ระหว่าง Disciplined Quant Bot (ครบ 8 บท) vs Normal Bot vs Market Index"""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -1173,13 +1173,13 @@ def save_backtest_comparison_chart(
         ax1.axvspan(start_dt, common_dates[-1], color="#fecdd3", alpha=0.35, label="_nolegend_")
         ax2.axvspan(start_dt, common_dates[-1], color="#fecdd3", alpha=0.35, label="_nolegend_")
 
-    # Top Panel: Equity Curve (The Secret Quant Bot vs Normal Bot)
+    # Top Panel: Equity Curve (Disciplined Quant Bot (ครบ 8 บท) vs Normal Bot)
     ax1.plot(
         common_dates,
         q_eq,
         color="#059669",
         linewidth=2.6,
-        label=f"The Secret Quant Bot (Adaptive 3-Agent + HRP + ATR + Cash Shield): {quant_summary.total_combined_wealth:,.0f} THB ({quant_summary.total_return_pct:+.2f}%, Sharpe {quant_summary.sharpe_ratio:.2f}, {len(quant_summary.trades)} trades)",
+        label=f"Disciplined Quant Bot (ครบ 8 บท) (Adaptive 3-Agent + HRP + ATR + Cash Shield): {quant_summary.total_combined_wealth:,.0f} THB ({quant_summary.total_return_pct:+.2f}%, Sharpe {quant_summary.sharpe_ratio:.2f}, {len(quant_summary.trades)} trades)",
     )
     ax1.plot(
         common_dates,
@@ -1191,7 +1191,7 @@ def save_backtest_comparison_chart(
     ax1.fill_between(common_dates, q_eq, n_eq, where=(q_eq >= n_eq), color="#10b981", alpha=0.10, interpolate=True)
     ax1.axhline(1_000_000, color="#475569", linewidth=0.9, linestyle=":")
     ax1.set_title(
-        "Head-to-Head Backtest Comparison: The Secret Quant Bot vs. Normal Bot (500 Trading Days | 1,000,000 THB)",
+        "Head-to-Head Backtest Comparison: Disciplined Quant Bot (ครบ 8 บท) vs. Normal Bot (500 Trading Days | 1,000,000 THB)",
         fontsize=12.2,
         fontweight="bold",
         color="#0f172a",
@@ -1203,7 +1203,7 @@ def save_backtest_comparison_chart(
 
     # Bottom Panel: Drawdown (%)
     ax2.fill_between(common_dates, q_dd, 0, color="#10b981", alpha=0.24)
-    ax2.plot(common_dates, q_dd, color="#059669", linewidth=1.8, label=f"The Secret Quant Bot Drawdown (Max: {quant_summary.max_drawdown_pct:.2f}%)")
+    ax2.plot(common_dates, q_dd, color="#059669", linewidth=1.8, label=f"Disciplined Quant Bot (ครบ 8 บท) Drawdown (Max: {quant_summary.max_drawdown_pct:.2f}%)")
     ax2.fill_between(common_dates, n_dd, 0, color="#f43f5e", alpha=0.18)
     ax2.plot(common_dates, n_dd, color="#e11d48", linewidth=1.6, label=f"Normal Bot Drawdown (Max: {normal_summary.max_drawdown_pct:.2f}%)")
     ax2.axhline(-5.0, color="#d97706", linewidth=1.1, linestyle="--", label="-5.0% Max Portfolio Heat / Risk Guard")
@@ -1224,7 +1224,7 @@ def save_backtest_comparison_chart(
 # =========================================================================================
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย - Full Educational Trading Bot & Backtest Engine"
+        description="เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย - Full Educational Trading Bot & Backtest Engine"
     )
     parser.add_argument(
         "--csv",
@@ -1246,7 +1246,7 @@ def main() -> None:
     cfg = QuantConfig()
 
     print("=" * 92)
-    print("  The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น (CH 1 - CH 14)")
+    print("  เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น (CH 1 - CH 14)")
     print("=" * 92)
 
     if args.regenerate_sample or not os.path.exists(args.csv):
@@ -1262,16 +1262,16 @@ def main() -> None:
 
     # สรุปสัดส่วนสภาวะตลาด (Market Regimes)
     regime_counts = idx_df["regime"].value_counts()
-    print("\n[2/6] ผลการจำแนกสภาวะตลาดรวม (Market Regime Detector - บทที่ 10):")
+    print("\n[2/6] ผลการจำแนกสภาวะตลาดรวม (Market Regime Detector - บทที่ 1):")
     for reg_name in ["BULL_TREND", "SIDEWAYS_QUIET", "CRISIS_PANIC"]:
         cnt = int(regime_counts.get(reg_name, 0))
         pct = (cnt / len(idx_df)) * 100.0
         print(f"      - {reg_name:<16}: {cnt:>3} วันทำการ ({pct:>5.1f}%)")
 
-    # คำนวณน้ำหนัก HRP ล่าสุด (บทที่ 12)
+    # คำนวณน้ำหนัก HRP ล่าสุด (บทที่ 1)
     latest_ret_df = pd.DataFrame({sym: sdf["ret_1d"].tail(60) for sym, sdf in stock_map.items()})
     hrp_weights = compute_hrp_weights(latest_ret_df, max_weight=cfg.max_single_weight_pct)
-    print("\n[3/6] สัดส่วนพอร์ตไร้ความเสี่ยงกระจุกตัว (Hierarchical Risk Parity - บทที่ 12):")
+    print("\n[3/6] สัดส่วนพอร์ตไร้ความเสี่ยงกระจุกตัว (Hierarchical Risk Parity - บทที่ 1):")
     for sym, w in sorted(hrp_weights.items(), key=lambda x: x[1], reverse=True):
         print(f"      - {sym:<12}: {w * 100.0:>5.2f}%")
 
@@ -1289,8 +1289,8 @@ def main() -> None:
     chart_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backtest_comparison_chart.png")
     save_backtest_comparison_chart(summary, normal_summary, idx_df, chart_out)
 
-    print("\n[5/6] สรุปผลการจำลองพอร์ตเปรียบเทียบ: The Secret Quant Bot vs. Normal Bot (บอททั่วไป):")
-    print(f"      {'ตัวชี้วัด (Metric)':<38} | {'The Secret Quant Bot':>20} | {'Normal Bot (บอททั่วไป)':>22}")
+    print("\n[5/6] สรุปผลการจำลองพอร์ตเปรียบเทียบ: Disciplined Quant Bot (ครบ 8 บท) vs. Normal Bot (บอททั่วไป):")
+    print(f"      {'ตัวชี้วัด (Metric)':<38} | {'Disciplined Quant Bot (ครบ 8 บท)':>20} | {'Normal Bot (บอททั่วไป)':>22}")
     print("      " + "-" * 86)
     print(f"      {'เงินทุนตั้งต้น (Initial Capital)':<38} | {summary.initial_capital:>16,.2f} บาท | {normal_summary.initial_capital:>18,.2f} บาท")
     print(f"      {'พอร์ตเทรดปลายงวด (Trading Equity)':<38} | {summary.final_trading_equity:>16,.2f} บาท | {normal_summary.final_trading_equity:>18,.2f} บาท")
@@ -1314,7 +1314,7 @@ def main() -> None:
                 f"PnL: {tr.net_pnl:>+9,.2f} บาท ({tr.r_multiple:>+4.2f}R) | {tr.exit_reason}"
             )
 
-    # จำลองการวางแผนส่งคำสั่งซื้อด้วย Smart TWAP / Micro-Price (บทที่ 13 & 14)
+    # จำลองการวางแผนส่งคำสั่งซื้อด้วย Smart TWAP / Micro-Price (บทที่ 6)
     sample_sym = sorted(stock_map.keys())[0]
     last_close = float(stock_map[sample_sym]["close"].iloc[-1])
     exec_plan = generate_smart_execution_plan(
@@ -1327,7 +1327,7 @@ def main() -> None:
         ask_vol=42_000,
         n_slices=4,
     )
-    print(f"\n[6/6] ตัวอย่างแผนส่งคำสั่งซื้ออัจฉริยะ (Smart TWAP & Micro-Price - บทที่ 13 & 14) สำหรับ {sample_sym}:")
+    print(f"\n[6/6] ตัวอย่างแผนส่งคำสั่งซื้ออัจฉริยะ (Smart TWAP & Micro-Price - บทที่ 6) สำหรับ {sample_sym}:")
     print(
         f"      - ราคาอ้างอิง: {exec_plan['ref_price']:.2f} บาท | "
         f"Spread: {exec_plan['spread_bps']:.1f} bps | "

@@ -14,11 +14,11 @@
 ลำดับการทำงาน 6 ขั้นตอนในไฟล์นี้:
   ขั้นตอนที่ 1: โหลดรายชื่อหุ้นในตลาดจากไฟล์ sample_thai_stocks_ohlcv.csv และคัดกรองหุ้นที่ไม่ผ่านเกณฑ์ออก
                (ตรวจความสะอาดข้อมูล บทที่ 3 + ตรวจแนวโน้มใหญ่และปริมาณซื้อขาย บทที่ 4)
-  ขั้นตอนที่ 2: คัดเลือก 4 หุ้นเข้าเทรดด้วย 4 กลยุทธ์ (Strategy A, B, C, D) พร้อมอธิบายเหตุผลละเอียด
-               - กลยุทธ์ A (STOCK_ICT.BK)  : หุ้นนำตลาดขาขึ้นแข็งแกร่ง (Trend Momentum Breakout)
-               - กลยุทธ์ B (STOCK_HELTH.BK): หุ้นขาขึ้นความผันผวนต่ำ พักฐานกรอบแคบ (Low-Volatility VCP)
-               - กลยุทธ์ C (STOCK_COMM.BK) : หุ้นพื้นฐานเติบโตที่ย่อตัวพักฐานระยะสั้นในขาขึ้นใหญ่ (Quality Pullback)
-               - กลยุทธ์ D (STOCK_BANK.BK) : หุ้นกลุ่มการเงินหมุนรอบสลับกลุ่มพร้อมวอลุ่มเข้า (Sector Rotation)
+  ขั้นตอนที่ 2: คัดเลือก 4 หุ้นเข้าเทรดด้วย 4 กลยุทธ์หลักของหนังสือ พร้อมอธิบายเหตุผลละเอียด
+               - TREND_BREAKOUT   (STOCK_ICT.BK)  : กลยุทธ์รันเทรนด์เมื่อทะลุกรอบแนวโน้ม (บทที่ 4)
+               - LOW_VOL_VCP      (STOCK_HELTH.BK): กลยุทธ์สะสมหุ้นขาขึ้นความผันผวนต่ำ (บทที่ 4)
+               - QUALITY_PULLBACK (STOCK_COMM.BK) : กลยุทธ์ช้อนซื้อหุ้นแข็งแกร่งย่อตัวพักฐาน (บทที่ 4 & 7)
+               - SECTOR_ROTATION  (STOCK_BANK.BK) : กลยุทธ์หมุนรอบกลุ่มอุตสาหกรรมพร้อมจุดตัดขาดทุนกระชับ (บทที่ 4 & 5)
   ขั้นตอนที่ 3: บริหารพอร์ต 1,000,000 บาท และคำนวณขนาดไม้ (Position Sizing — บทที่ 1, 5, 6)
                - คำนวณราคาเข้าซื้อที่ราคาเปิดวันถัดไป (Next-Open Fill ป้องกันการแอบดูอนาคต บทที่ 2 & 3)
                - คำนวณจุดตัดขาดทุน (Cut-Loss Price), จุดขยับบังทุน (Breakeven Lock), และราคาเป้าหมาย (Target Price)
@@ -150,6 +150,24 @@ def load_and_scan_market_from_csv(
     อ่านข้อมูลราคาหุ้นจากไฟล์ sample_thai_stocks_ohlcv.csv คำนวณตัวชี้วัดทางสถิติแบบไม่แอบดูอนาคต (Point-in-Time)
     และสรุปตารางรายชื่อหุ้นทั้งหมดในตลาด ณ วันตัดสินใจ (cfg.signal_date)
     """
+    # =====================================================================================
+    # [หมายเหตุสำหรับระบบใช้งานจริง - การดึงข้อมูลราคาตลาด (Market Data Ingestion)]
+    # ในห้องแล็บของหนังสือ เราอ่านข้อมูลจากไฟล์ CSV ออฟไลน์ (sample_thai_stocks_ohlcv.csv)
+    # เพื่อให้ผู้อ่านทุกคนรันโค้ดซ้ำแล้วได้ตัวเลขตรงกับในหนังสือ 100% โดยไม่ต้องผูกบัญชีภายนอก
+    #
+    # หากคุณนำโครงสร้างนี้ไปต่อยอดใช้งานจริงในอนาคต สามารถเปลี่ยนเฉพาะบรรทัด pd.read_csv(...) ด้านล่าง
+    # ให้ดึงข้อมูลจากแหล่งข้อมูลจริงได้ 3 แนวทางหลัก โดยยังคงด่านตรวจความสะอาด (บทที่ 3) ไว้เหมือนเดิม:
+    #   แนวทางที่ 1 (ข้อมูลรายวันฟรีผ่าน Yahoo Finance):
+    #       import yfinance as yf
+    #       raw_df = yf.download(["ADVANC.BK", "BDMS.BK", "CPALL.BK", "KBANK.BK"], period="2y")
+    #   แนวทางที่ 2 (ข้อมูลเรียลไทม์/รายวันจากโบรกเกอร์ไทยผ่าน Settrade Open API v2):
+    #       from settrade_v2 import Investor
+    #       investor = Investor(app_id="...", app_secret="...", broker_id="...", app_code="...")
+    #       market = investor.MarketData()
+    #       candles = market.get_candlestick(symbol="ADVANC", interval="1d", limit=500)
+    #   แนวทางที่ 3 (ดึงจากฐานข้อมูลภายในองค์กร เช่น PostgreSQL / TimescaleDB / SETSMART CSV):
+    #       raw_df = pd.read_sql("SELECT date, symbol, sector, open, high, low, close, volume FROM ohlcv", conn)
+    # =====================================================================================
     raw_df = pd.read_csv(csv_path)
 
     # คำนวณผลตอบแทน 60 วันของดัชนีตลาด (SET_INDEX) เพื่อใช้เปรียบเทียบความแข็งแกร่งสัมพัทธ์ (RS)
@@ -208,7 +226,7 @@ def load_and_scan_market_from_csv(
         elif not passed_uptrend:
             status = "REJECTED_DOWNTREND (คัดออก: ราคาต่ำกว่าแนวโน้มใหญ่ SMA 150)"
         else:
-            status = "PASSED_CANDIDATE (ผ่านเกณฑ์พื้นฐาน เข้าสู่รอบคัดเลือกกลยุทธ์ A/B/C/D)"
+            status = "PASSED_CANDIDATE (ผ่านเกณฑ์พื้นฐาน เข้าสู่รอบคัดเลือก 4 กลยุทธ์หลัก)"
 
         scan_rows.append(
             MarketScanRow(
@@ -235,14 +253,14 @@ def load_and_scan_market_from_csv(
 
 
 # =========================================================================================
-# ส่วนที่ 3: คัดเลือก 4 หุ้นเข้าเทรดด้วยกลยุทธ์ A, B, C, D พร้อมคำนวณแผนราคาและขนาดไม้ (บทที่ 4 & 5)
+# ส่วนที่ 3: คัดเลือก 4 หุ้นเข้าเทรดด้วย 4 กลยุทธ์หลักของหนังสือ พร้อมคำนวณแผนราคาและขนาดไม้ (บทที่ 4 & 5)
 # =========================================================================================
 @dataclass
 class SelectedTradePlan:
     """
     ใบแผนการเทรดของหุ้นที่ได้รับคัดเลือกเข้าพอร์ต (เก็บครบทุกตัวเลขที่ต้องใช้ส่งคำสั่งจำลองและบันทึก Log)
     """
-    strategy_code: str           # รหัสกลยุทธ์: STRATEGY_A, STRATEGY_B, STRATEGY_C, STRATEGY_D
+    strategy_code: str           # รหัสกลยุทธ์: TREND_BREAKOUT, LOW_VOL_VCP, QUALITY_PULLBACK, SECTOR_ROTATION
     strategy_name_th: str        # ชื่อกลยุทธ์ภาษาไทย
     symbol: str                  # ชื่อหุ้นจากไฟล์ CSV
     sector: str                  # กลุ่มอุตสาหกรรม
@@ -270,7 +288,8 @@ def select_four_trades_abcd_from_scan(
     cfg: PortfolioConfig,
 ) -> Tuple[List[SelectedTradePlan], List[Dict[str, str]]]:
     """
-    นำรายชื่อหุ้นที่สแกนได้จากไฟล์ CSV มาคัดเลือกเข้า 4 กลยุทธ์ (Strategy A, B, C, D)
+    นำรายชื่อหุ้นที่สแกนได้จากไฟล์ CSV มาคัดเลือกเข้า 4 กลยุทธ์หลักของหนังสือ
+    (TREND_BREAKOUT, LOW_VOL_VCP, QUALITY_PULLBACK, SECTOR_ROTATION)
     และอธิบายเหตุผลของหุ้นที่ถูกคัดออกหรือเก็บไว้ในบัญชีเฝ้ารอ (Watchlist)
     """
     row_map = {r.symbol: r for r in scan_rows}
@@ -353,11 +372,11 @@ def select_four_trades_abcd_from_scan(
             sizing_note_th=sizing_note,
         )
 
-    # 1. กลยุทธ์ A (Strategy A: Trend Momentum Breakout) -> เลือก STOCK_ICT.BK
+    # 1. กลยุทธ์รันเทรนด์เมื่อทะลุกรอบแนวโน้ม (TREND_BREAKOUT — บทที่ 4) -> เลือก STOCK_ICT.BK
     ict = row_map["STOCK_ICT.BK"]
     selected_plans.append(_create_plan(
-        strategy_code="STRATEGY_A",
-        strategy_name_th="กลยุทธ์ A: หุ้นนำตลาดขาขึ้นแข็งแกร่ง (Trend Momentum Breakout)",
+        strategy_code="TREND_BREAKOUT",
+        strategy_name_th="กลยุทธ์รันเทรนด์เมื่อทะลุกรอบแนวโน้ม (Trend Momentum Breakout — บทที่ 4)",
         row=ict,
         discussion_th=(
             f"ราคาปิด ({ict.close_price:.2f} บาท) ยืนเหนือทั้งเส้นค่าเฉลี่ยระยะสั้น SMA 20 ({ict.sma_20:.2f} บาท) "
@@ -370,11 +389,11 @@ def select_four_trades_abcd_from_scan(
         breakeven_r_mult=1.45,
     ))
 
-    # 2. กลยุทธ์ B (Strategy B: Low-Volatility VCP Uptrend) -> เลือก STOCK_HELTH.BK
+    # 2. กลยุทธ์สะสมหุ้นขาขึ้นความผันผวนต่ำ (LOW_VOL_VCP — บทที่ 4) -> เลือก STOCK_HELTH.BK
     helth = row_map["STOCK_HELTH.BK"]
     selected_plans.append(_create_plan(
-        strategy_code="STRATEGY_B",
-        strategy_name_th="กลยุทธ์ B: หุ้นขาขึ้นความผันผวนต่ำ พักฐานกรอบแคบ (Low-Volatility VCP)",
+        strategy_code="LOW_VOL_VCP",
+        strategy_name_th="กลยุทธ์สะสมหุ้นขาขึ้นความผันผวนต่ำ (Low-Volatility VCP — บทที่ 4)",
         row=helth,
         discussion_th=(
             f"เป็นหุ้นกลุ่มการแพทย์ที่มีความผันผวนรายวันต่ำที่สุดในตลาด (ATR เพียง {helth.atr_14:.2f} บาท หรือ {helth.atr_pct_of_price:.2f}% ของราคา) "
@@ -386,11 +405,11 @@ def select_four_trades_abcd_from_scan(
         breakeven_r_mult=1.5,
     ))
 
-    # 3. กลยุทธ์ C (Strategy C: Quality Growth Pullback to SMA 20) -> เลือก STOCK_COMM.BK
+    # 3. กลยุทธ์ช้อนซื้อหุ้นแข็งแกร่งย่อตัวพักฐาน (QUALITY_PULLBACK — บทที่ 4 & 7) -> เลือก STOCK_COMM.BK
     comm = row_map["STOCK_COMM.BK"]
     selected_plans.append(_create_plan(
-        strategy_code="STRATEGY_C",
-        strategy_name_th="กลยุทธ์ C: หุ้นแข็งแกร่งย่อตัวพักฐานระยะสั้นบนขาขึ้นใหญ่ (Quality Pullback)",
+        strategy_code="QUALITY_PULLBACK",
+        strategy_name_th="กลยุทธ์ช้อนซื้อหุ้นแข็งแกร่งย่อตัวพักฐาน (Quality Pullback — บทที่ 4 & 7)",
         row=comm,
         discussion_th=(
             f"โครงสร้างแนวโน้มระยะยาวแข็งแกร่งมาก (ราคา {comm.close_price:.2f} บาท อยู่สูงกว่า SMA 150 ที่ {comm.sma_150:.2f} บาท ถึง +17.1%) "
@@ -402,11 +421,11 @@ def select_four_trades_abcd_from_scan(
         breakeven_r_mult=1.3,
     ))
 
-    # 4. กลยุทธ์ D (Strategy D: Sector Rotation & Tight Stop) -> เลือก STOCK_BANK.BK
+    # 4. กลยุทธ์หมุนรอบกลุ่มอุตสาหกรรมพร้อมจุดตัดขาดทุนกระชับ (SECTOR_ROTATION — บทที่ 4 & 5) -> เลือก STOCK_BANK.BK
     bank = row_map["STOCK_BANK.BK"]
     selected_plans.append(_create_plan(
-        strategy_code="STRATEGY_D",
-        strategy_name_th="กลยุทธ์ D: หุ้นหมุนรอบกลุ่มอุตสาหกรรมการเงินพร้อมวอลุ่มเข้า (Sector Rotation)",
+        strategy_code="SECTOR_ROTATION",
+        strategy_name_th="กลยุทธ์หมุนรอบกลุ่มอุตสาหกรรมพร้อมจุดตัดขาดทุนกระชับ (Sector Rotation — บทที่ 4 & 5)",
         row=bank,
         discussion_th=(
             f"ราคาปิด ({bank.close_price:.2f} บาท) อยู่เหนือทั้ง SMA 20 ({bank.sma_20:.2f}) และ SMA 150 ({bank.sma_150:.2f}) "
@@ -438,7 +457,7 @@ def select_four_trades_abcd_from_scan(
         "decision": "WATCHLIST_STANDBY (เก็บเข้าบัญชีเฝ้ารอ)",
         "reason_th": (
             f"ผ่านเกณฑ์แนวโน้มขาขึ้นพื้นฐาน (ราคา {trans.close_price:.2f} > SMA 150 ที่ {trans.sma_150:.2f} บาท) "
-            "แต่พอร์ตจัดสรรครบ 4 ไม้หลัก (กลยุทธ์ A, B, C, D) แล้ว จึงเก็บเป็นตัวสำรองอันดับ 1 หากมีไม้ใดขายปิดสถานะออกไป"
+            "แต่พอร์ตจัดสรรครบ 4 ไม้หลัก (4 กลยุทธ์) แล้ว จึงเก็บเป็นตัวสำรองอันดับ 1 หากมีไม้ใดขายปิดสถานะออกไป"
         ),
     })
 
@@ -453,7 +472,7 @@ class TradeTrackingLogRow:
     """
     แถวข้อมูลบันทึกผลการถือครองและบริหารจัดการสถานะของทั้ง 4 หุ้น (สำหรับบันทึกลงไฟล์ CSV และ JSON)
     """
-    strategy_code: str           # รหัสกลยุทธ์ (STRATEGY_A .. D)
+    strategy_code: str           # รหัสกลยุทธ์ (TREND_BREAKOUT, LOW_VOL_VCP, QUALITY_PULLBACK, SECTOR_ROTATION)
     symbol: str                  # ชื่อหุ้น
     sector: str                  # กลุ่มอุตสาหกรรม
     entry_date: str              # วันที่เข้าซื้อจริง (วันถัดไปหลังวันเกิดสัญญาณ)
@@ -529,6 +548,25 @@ def simulate_broker_and_track_positions_on_csv(
         raw_intent = f"{entry_date}|{plan.symbol}|{plan.strategy_code}|BUY|{plan.approved_shares}|{plan.entry_price:.2f}"
         order_key = hashlib.sha256(raw_intent.encode("utf-8")).hexdigest()[:16]
 
+        # =================================================================================
+        # [หมายเหตุสำหรับระบบใช้งานจริง - การส่งคำสั่งซื้อขายจริง (Live Broker Execution)]
+        # ในห้องแล็บของหนังสือ เราใช้การจำลองส่งคำสั่งแบบออฟไลน์ (SIMULATED_FILLED) ลงฐานข้อมูล SQLite
+        # เพื่อให้ผู้อ่านฝึกตรวจสอบขนาดไม้, การปัดช่องราคา Tick Size, และระบบป้องกันการยิงซ้ำได้อย่างปลอดภัย
+        #
+        # หากในอนาคตผู้ที่มีความชำนาญต้องการเชื่อมต่อระบบเข้ากับบัญชีโบรกเกอร์จริง (เช่น Settrade Open API v2):
+        #   1) ต้องตรวจเช็คในฐานข้อมูล SQLite ก่อนว่า order_key นี้เคยถูกส่งไปแล้วหรือยัง (ป้องกันการส่งคำสั่งซ้ำเมื่อเน็ตหลุด)
+        #   2) เปลี่ยนเฉพาะส่วนบันทึก SIMULATED_FILLED ด้านล่าง เป็นการเรียก API โบรกเกอร์ เช่น:
+        #        equity = investor.Equity(account_no="เลขบัญชีของคุณ")
+        #        order_resp = equity.place_order(
+        #            symbol=plan.symbol.replace(".BK", ""),
+        #            side="Buy",
+        #            price_type="Limit",
+        #            price=plan.entry_price,       # ปัด Tick Size เรียบร้อยแล้ว
+        #            volume=plan.approved_shares,  # ปัด Board Lot (100 หุ้น) เรียบร้อยแล้ว
+        #            pin="รหัส PIN ของคุณ"
+        #        )
+        #   3) ดึงยอดหุ้นคงเหลือจริงจาก equity.get_portfolio() มาเทียบกับสมุดพอร์ต (3-Way Reconciliation บทที่ 8)
+        # =================================================================================
         conn.execute(
             """
             INSERT OR IGNORE INTO simulated_orders
@@ -802,7 +840,7 @@ def run_complete_final_system_demo(output_dir: Optional[Path] = None) -> Dict[st
     backtest_report = run_500day_insample_outofsample_backtest(csv_path)
 
     print("=" * 98)
-    print("  ระบบเทรดจำลองฉบับสมบูรณ์ (Final Version): สแกนตลาด -> เลือก 4 หุ้นด้วยกลยุทธ์ A, B, C, D -> บริหารพอร์ต -> บันทึก Log")
+    print("  ระบบเทรดจำลองฉบับสมบูรณ์ (Final Version): สแกนตลาด -> เลือก 4 หุ้นด้วย 4 กลยุทธ์หลัก -> บริหารพอร์ต -> บันทึก Log")
     print("=" * 98)
 
     print(f"\n[ขั้นตอนที่ 1] สแกนรายชื่อหุ้นในตลาดจากไฟล์ sample_thai_stocks_ohlcv.csv (ณ วันตัดสินใจ {cfg.signal_date}):")
@@ -814,7 +852,7 @@ def run_complete_final_system_demo(output_dir: Optional[Path] = None) -> Dict[st
             f"{r.sma_150:>8.2f} | {r.atr_14:>6.2f} | {r.rvol_20d:>4.2f}x | {r.screening_status}"
         )
 
-    print("\n[ขั้นตอนที่ 2] คัดเลือก 4 หุ้นเข้าเทรดด้วย 4 กลยุทธ์ (Strategy A, B, C, D) พร้อมเหตุผลและแผนราคา:")
+    print("\n[ขั้นตอนที่ 2] คัดเลือก 4 หุ้นเข้าเทรดด้วย 4 กลยุทธ์หลักของหนังสือ พร้อมเหตุผลและแผนราคา:")
     for idx, plan in enumerate(selected_plans, start=1):
         print("-" * 98)
         print(f"  ไม้ที่ {idx} | {plan.strategy_name_th}")

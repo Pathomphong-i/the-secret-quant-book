@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-The Secret Quant: 8-Volume Masterclass Series
-เล่มที่ 4: สัญญาณเทคนิคเชิงสถิติและการตรวจจับสภาวะตลาด (The Alpha & Technical Signal Engine)
+หนังสือ: เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python
+บทที่ 4: สัญญาณเทคนิคเชิงสถิติและการตรวจจับสภาวะตลาด (The Alpha & Technical Signal Engine)
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
-รวมซอร์สโค้ดครบทุกบทประจำเล่มที่ 4 พร้อมรันทดสอบได้ทันที
+รวมซอร์สโค้ดครบทุกหัวข้อประจำบทที่ 4 พร้อมรันทดสอบได้ทันที
 """
 
 from __future__ import annotations
@@ -554,7 +554,7 @@ def run_daily_vol4_signal_pipeline(
     if qualified.empty:
         return pd.DataFrame()
         
-    # 3. คำนวณคะแนนรวม Multi-Agent Alpha Conviction Score (บทที่ 12)
+    # 3. คำนวณคะแนนรวม Multi-Agent Alpha Conviction Score (บทที่ 4)
     scored_df = combine_multi_agent_alpha_score(qualified, regime_probs)
     scored_df["dominant_regime"] = regime_probs.idxmax()
     scored_df["crisis_prob"] = float(regime_probs["HIGH_VOL_CRISIS"])

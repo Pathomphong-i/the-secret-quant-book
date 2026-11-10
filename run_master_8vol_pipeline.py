@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
 ========================================================================================
-The Secret Quant: 8-Volume Masterclass Series — Master End-to-End Pipeline Runner
+หนังสือ: เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python — Master End-to-End Pipeline Runner
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
 ========================================================================================
-สคริปต์แม่แบบบูรณาการ (Master Glue Script) ที่เชื่อมโยงโค้ดจากหนังสือทั้ง 8 เล่มเข้าด้วยกัน:
-  - เล่มที่ 3 (08_vol3_...): ดึงข้อมูล + ตรวจความสะอาด + ปรับฐานปันผล/แตกพาร์ (Data & Hygiene)
-  - เล่มที่ 4 (09_vol4_...): คำนวณ ER, Hurst, Regime, VCP, KAMA, RVOL/CLV & Ensemble Alpha
-  - เล่มที่ 7 (12_vol7_...): กรองข่าวด้วย Gemini LLM JSON, ตรวจงบการเงิน & เรดาร์มหภาค (Master AI Gate)
-  - เล่มที่ 5 (10_vol5_...): จัดพอร์ต HRP, คำนวณขนาดไม้ ATR/Safe Kelly & ตรวจเพดาน Portfolio Heat <= 5%
-  - เล่มที่ 6 (11_vol6_...): ตรวจกระดาน 5-Level OBI, Micro-Price, ซอยไม้ TWAP & กฎ SET 8 มาตรการใหม่
-  - เล่มที่ 8 (13_vol8_...): บันทึกคำสั่งแบบ Idempotent SHA-256, คำนวณเกราะ TFEX Hedge & พอร์ตโกลบอล
+สคริปต์แม่แบบบูรณาการ (Master Glue Script) ที่เชื่อมโยงโค้ดจากหนังสือทั้ง 8 บทเข้าด้วยกัน:
+  - บทที่ 3 (08_vol3_...): ดึงข้อมูล + ตรวจความสะอาด + ปรับฐานปันผล/แตกพาร์ (Data & Hygiene)
+  - บทที่ 4 (09_vol4_...): คำนวณ ER, Hurst, Regime, VCP, KAMA, RVOL/CLV & Ensemble Alpha
+  - บทที่ 7 (12_vol7_...): กรองข่าวด้วย Gemini LLM JSON, ตรวจงบการเงิน & เรดาร์มหภาค (Master AI Gate)
+  - บทที่ 5 (10_vol5_...): จัดพอร์ต HRP, คำนวณขนาดไม้ ATR/Safe Kelly & ตรวจเพดาน Portfolio Heat <= 5%
+  - บทที่ 6 (11_vol6_...): ตรวจกระดาน 5-Level OBI, Micro-Price, ซอยไม้ TWAP & กฎ SET 8 มาตรการใหม่
+  - บทที่ 8 (13_vol8_...): บันทึกคำสั่งแบบ Idempotent SHA-256, คำนวณเกราะ TFEX Hedge & พอร์ตโกลบอล
 ========================================================================================
 """
 
@@ -58,15 +58,15 @@ def run_8vol_masterclass_pipeline() -> None:
     v7 = _load_mod("vol7_ai", "12_vol7_multimodal_ai_and_gemini_client.py")
     v8 = _load_mod("vol8_cloud", "13_vol8_cloud_ops_tfex_and_global_multi_asset.py")
 
-    # 1. [เล่มที่ 3] ดึงข้อมูลและทำความสะอาดผ่าน Sanity Filter (Data Engineering & Hygiene)
+    # 1. [บทที่ 3] ดึงข้อมูลและทำความสะอาดผ่าน Sanity Filter (Data Engineering & Hygiene)
     raw_df, _, _ = v3.fetch_thai_stocks_and_corporate_actions(symbols=["BETA.BK"], period="6mo")
     clean_df, quarantine_df = v3.sanitize_ohlcv_frame(raw_df)
     print(
-        f"[1/6 เล่มที่ 3 - Data & Hygiene] ดึงและคัดกรองข้อมูลสะอาดสำเร็จ: {len(clean_df)} แท่งเทียน "
+        f"[1/6 บทที่ 3 - Data & Hygiene] ดึงและคัดกรองข้อมูลสะอาดสำเร็จ: {len(clean_df)} แท่งเทียน "
         f"(tradable={int(clean_df['is_tradable'].sum())}, กักกัน={len(quarantine_df)})"
     )
 
-    # 2. [เล่มที่ 4] คำนวณสภาวะตลาด (Softmax Regime) และรวมคะแนน Alpha Conviction
+    # 2. [บทที่ 4] คำนวณสภาวะตลาด (Softmax Regime) และรวมคะแนน Alpha Conviction
     regime_probs = v4.compute_regime_probabilities(breadth=0.68, atr_zscore=-0.30, index_er20=0.58)
     dominant_regime = str(regime_probs.idxmax())
     candidates_df = pd.DataFrame([
@@ -76,11 +76,11 @@ def run_8vol_masterclass_pipeline() -> None:
     alpha_score = float(alpha_df.loc[0, "final_alpha_score"])
     alpha_tier = str(alpha_df.loc[0, "conviction_tier"])
     print(
-        f"[2/6 เล่มที่ 4 - Alpha Signal  ] โหมดตลาด={dominant_regime} (P={regime_probs[dominant_regime]:.3f}) "
+        f"[2/6 บทที่ 4 - Alpha Signal  ] โหมดตลาด={dominant_regime} (P={regime_probs[dominant_regime]:.3f}) "
         f"| Final Alpha={alpha_score:.2f} ({alpha_tier})"
     )
 
-    # 3. [เล่มที่ 7] กรองข่าวด้วย LLM JSON + งบการเงิน + เรดาร์ความเสี่ยงมหภาค (Master AI Gate)
+    # 3. [บทที่ 7] กรองข่าวด้วย LLM JSON + งบการเงิน + เรดาร์ความเสี่ยงมหภาค (Master AI Gate)
     raw_llm = v7.call_gemini_structured_json(
         system_prompt="Return strict quantitative news JSON.",
         user_text="BETA รายงานกำไรสุทธิเติบโตแข็งแกร่งและกระแสเงินสดจากการดำเนินงานสูงกว่าคาด",
@@ -96,11 +96,11 @@ def run_8vol_masterclass_pipeline() -> None:
         effective_news_score=float(news_sig["effective_news_score"]),
     )
     print(
-        f"[3/6 เล่มที่ 7 - Multi-Modal AI] สถานะ AI Gate={ai_gate['status']} "
+        f"[3/6 บทที่ 7 - Multi-Modal AI] สถานะ AI Gate={ai_gate['status']} "
         f"| น้ำหนักพอร์ตหลังปรับ={ai_gate['final_weight']*100:.2f}% | แนะนำอัลกอริทึม={ai_gate['recommended_execution_algo']}"
     )
 
-    # 4. [เล่มที่ 5] คำนวณขนาดไม้ ATR Conviction Sizing และตรวจสอบเพดานความเสี่ยงต่อไม้
+    # 4. [บทที่ 5] คำนวณขนาดไม้ ATR Conviction Sizing และตรวจสอบเพดานความเสี่ยงต่อไม้
     sizing = v5.compute_conviction_scaled_size(
         equity=2_000_000.0,
         entry_price=218.0,
@@ -109,11 +109,11 @@ def run_8vol_masterclass_pipeline() -> None:
         market_regime="BULL_QUIET",
     )
     print(
-        f"[4/6 เล่มที่ 5 - Portfolio Risk] จำนวนหุ้นอนุมัติ={sizing['shares']:,} หุ้น "
+        f"[4/6 บทที่ 5 - Portfolio Risk] จำนวนหุ้นอนุมัติ={sizing['shares']:,} หุ้น "
         f"| งบความเสี่ยง={sizing['risk_budget_baht']:,.0f} บาท (Effective Risk={sizing['effective_risk_pct']*100:.2f}%)"
     )
 
-    # 5. [เล่มที่ 6] ตรวจสอบกระดาน 5-Level OBI, Micro-Price, กฎ Tick/Board Lot และซอยไม้ TWAP
+    # 5. [บทที่ 6] ตรวจสอบกระดาน 5-Level OBI, Micro-Price, กฎ Tick/Board Lot และซอยไม้ TWAP
     b_p, a_p, b_vols, a_vols = v6.parse_settrade_bid_offer_snapshot({
         "bid_price_1": 218.0, "bid_volume_1": 85_000, "bid_volume_2": 62_000, "bid_volume_3": 54_000, "bid_volume_4": 48_000, "bid_volume_5": 40_000,
         "ask_price_1": 219.0, "ask_volume_1": 22_000, "ask_volume_2": 31_000, "ask_volume_3": 28_000, "ask_volume_4": 35_000, "ask_volume_5": 45_000,
@@ -124,11 +124,11 @@ def run_8vol_masterclass_pipeline() -> None:
         total_shares=int(rounded["board_lot_shares"]), duration_seconds=1200, num_slices=4, seed=42
     )
     print(
-        f"[5/6 เล่มที่ 6 - Smart Exec    ] Micro-Price={micro['micro_price']:.3f} ({micro['order_instruction']}) "
+        f"[5/6 บทที่ 6 - Smart Exec    ] Micro-Price={micro['micro_price']:.3f} ({micro['order_instruction']}) "
         f"| ซอยคำสั่ง TWAP={len(twap_plan)} ไม้ย่อย @ {rounded['valid_price']:.2f} บาท"
     )
 
-    # 6. [เล่มที่ 8] บันทึกคำสั่งลง Idempotent SQLite WAL Ledger และคำนวณสัดส่วนพอร์ต Global Multi-Asset
+    # 6. [บทที่ 8] บันทึกคำสั่งลง Idempotent SQLite WAL Ledger และคำนวณสัดส่วนพอร์ต Global Multi-Asset
     ledger = v8.IdempotentOrderLedger(db_path=":memory:")
     order_key = ledger.make_key("2026-11-02", "VOL1_TO_8_MASTER", "BETA", "BUY", slice_idx=1)
     ok_send, ledger_status = ledger.register_or_block(order_key, "BETA", "BUY", int(rounded["board_lot_shares"]))
@@ -138,11 +138,11 @@ def run_8vol_masterclass_pipeline() -> None:
         asset_vols_pct={"TH_EQUITY": 14.0, "US_EQUITY": 16.0, "GOLD_GLD": 13.0, "CASH_TBILLS": 4.0},
     )
     print(
-        f"[6/6 เล่มที่ 8 - Cloud & Global] สถานะคำสั่ง={ledger_status} (Key={order_key}) "
+        f"[6/6 บทที่ 8 - Cloud & Global] สถานะคำสั่ง={ledger_status} (Key={order_key}) "
         f"| Global Weights={global_alloc['weights_pct']}"
     )
     print("=" * 92)
-    print("✅ รันท่อประมวลผลครบทั้ง 8 เล่ม (End-to-End 8-Volume Masterclass Pipeline) สำเร็จสมบูรณ์ 100%!")
+    print("✅ รันท่อประมวลผลครบทั้ง 8 บท (End-to-End 8-Volume Masterclass Pipeline) สำเร็จสมบูรณ์ 100%!")
     print("=" * 92)
 
 

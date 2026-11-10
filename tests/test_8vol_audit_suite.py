@@ -2,15 +2,16 @@
 """
 tests/test_8vol_audit_suite.py
 ==============================
-Automated Technical & Editorial Audit Verification Suite across all 8 Volumes.
+Automated Technical & Editorial Audit Verification Suite across all 8 Chapters (บทที่ 1–8).
 Verifies every P0 and P1 mathematical/engineering edge case identified in the audit:
 - P0-1: Deterministic benchmark & controlled ablation reproduction
 - P0-2: Point-in-Time news sanitizer (published_at vs received_at, Asia/Bangkok TZ,
         weekend/holiday rollover, lunch break 12:30-14:25, after-hours > 16:25, entity/year masking)
 - P0-3: 3-Tier Circuit Breaker & Kill-Switch (open order sweep cancellation & portfolio state action)
-- P1-Vol3: Walk-Forward Efficiency (WFE) protection when In-Sample return <= 0 or < min_is_ann_ret
-- P1-Vol4: Cross-Sectional RS minimum bar filter (min_valid_bars=120) & universe size flag
-- P1-Vol6: Multi-Level OBI protection against empty/Ceiling-Floor order books and < 5 levels
+- P0-4: Complete Capstone Final Trading System pipeline (TREND_BREAKOUT, LOW_VOL_VCP, QUALITY_PULLBACK, SECTOR_ROTATION)
+- P1-Ch3: Walk-Forward Efficiency (WFE) protection when In-Sample return <= 0 or < min_is_ann_ret
+- P1-Ch4: Cross-Sectional RS minimum bar filter (min_valid_bars=120) & universe size flag
+- P1-Ch6: Multi-Level OBI protection against empty/Ceiling-Floor order books and < 5 levels
 """
 
 from __future__ import annotations
@@ -149,7 +150,7 @@ class TestEightVolumeAuditSuite(unittest.TestCase):
             self.assertEqual(len(plans), 4)
             self.assertEqual(
                 [p["strategy_code"] for p in plans],
-                ["STRATEGY_A", "STRATEGY_B", "STRATEGY_C", "STRATEGY_D"],
+                ["TREND_BREAKOUT", "LOW_VOL_VCP", "QUALITY_PULLBACK", "SECTOR_ROTATION"],
             )
             self.assertEqual(
                 [p["symbol"] for p in plans],

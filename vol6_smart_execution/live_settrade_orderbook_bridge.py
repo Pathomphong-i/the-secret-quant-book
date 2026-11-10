@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-The Secret Quant: 8-Volume Masterclass Series
-เล่มที่ 6: โครงสร้างกระดานซื้อขายและอัลกอริทึมส่งคำสั่ง (Smart Execution & Order Book Microstructure)
+หนังสือ: เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python
+บทที่ 6: โครงสร้างกระดานซื้อขายและอัลกอริทึมส่งคำสั่ง (Smart Execution & Order Book Microstructure)
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
-รวมซอร์สโค้ดครบทุกบทประจำเล่มที่ 6 พร้อมรันทดสอบได้ทันที
+รวมซอร์สโค้ดครบทุกหัวข้อประจำบทที่ 6 พร้อมรันทดสอบได้ทันที
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def parse_settrade_bid_offer_snapshot(msg: dict) -> tuple[float, float, list[int
     """
     แปลงข้อมูล Bid-Offer 5 ช่องราคาจาก Settrade Open API (REST / MQTT Realtime)
     ให้เป็น (best_bid, best_ask, bid_vols_5, ask_vols_5) พร้อมส่งเข้า
-    compute_multilevel_obi() และ compute_micro_price_and_urgency() ในเล่มที่ 6 ได้ทันที
+    compute_multilevel_obi() และ compute_micro_price_and_urgency() ในบทที่ 6 ได้ทันที
     """
     best_bid = float(msg.get("bid_price_1", msg.get("bid1", 0.0)) or 0.0)
     best_ask = float(msg.get("ask_price_1", msg.get("offer1", 0.0)) or 0.0)

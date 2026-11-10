@@ -90,7 +90,7 @@ class StarterThreeAgentCouncil:
     ) -> CouncilDecision:
         """
         ให้สมองย่อยทั้ง 3 ตัวลงคะแนนเสียง แล้วถ่วงน้ำหนักด้วยความน่าจะเป็นของสภาวะตลาด
-        (`regime_probs` ได้จาก MarketRegimeDetector ในบทที่ 10)
+        (`regime_probs` ได้จาก MarketRegimeDetector ในบทที่ 4)
         """
         df = self.compute_adaptive_indicators(df_ohlcv)
         latest = df.iloc[-1]
