@@ -53,6 +53,7 @@ python3 -m unittest discover -s tests -p test_learning_lab.py -v
 .
 ├── LEARNING_GUIDE.md                  # คู่มือเริ่มต้นเรียนรู้และตารางตรวจผลลัพธ์ครบทั้ง 8 บท
 ├── learning_lab.py                    # ห้องแล็บหลัก 8 บท (Python Standard Library ล้วน)
+├── final_trading_system_abcd.py       # ระบบเทรดจำลองฉบับสมบูรณ์ (สแกนตลาด -> คัด 4 หุ้นกลยุทธ์ A/B/C/D -> บริหารพอร์ต -> บันทึก CSV/JSON Log -> Backtest 500 วัน)
 ├── requirements.txt                   # ไลบรารีเสริมสำหรับสคริปต์ศึกษาต่อยอดในเส้นทางที่ 2
 ├── reproduce_benchmarks.py            # สคริปต์จำลองสมมติฐานควบคุมเพื่อเปรียบเทียบแนวคิดรายหัวข้อ
 ├── run_master_8vol_pipeline.py        # สคริปต์สาธิตการเชื่อมโมดูลจำลองครบทั้ง 8 บทเข้าด้วยกัน
@@ -70,11 +71,15 @@ python3 -m unittest discover -s tests -p test_learning_lab.py -v
 └── vol8_cloud_multi_asset/            # โค้ดศึกษาเพิ่มเติมประกอบ บทที่ 8 (กระทบยอด & หลายสินทรัพย์)
 ```
 
-### วิธีรันโมดูลศึกษาต่อยอด (ต้องติดตั้ง `requirements.txt` ก่อน)
+### วิธีรันระบบเทรดจำลองฉบับสมบูรณ์ (`final_trading_system_abcd.py`) และโมดูลศึกษาต่อยอด
 ```bash
 pip install -r requirements.txt
+
+# รันระบบเทรดจำลองฉบับสมบูรณ์ (สแกนตลาด -> เลือก 4 หุ้นด้วยกลยุทธ์ A, B, C, D -> คำนวณขนาดไม้/Target/Cut-Loss -> บันทึก CSV/JSON Log -> Backtest In-Sample vs Out-of-Sample)
+python3 final_trading_system_abcd.py
+
+# รันชุดทดสอบความถูกต้องทั้งหมด
 python3 -m unittest discover -s tests -p "test_*.py" -v
-python3 run_master_8vol_pipeline.py
 ```
 
 > **ข้อควรทราบเกี่ยวกับสคริปต์ในเส้นทางที่ 2:** ไฟล์เชื่อมต่อข้อมูลภายนอก (เช่น `yfinance`, `Settrade Open API`, `Google Gemini API` หรือ `Docker`) เป็นแม่แบบโครงสร้างซอฟต์แวร์เพื่อการศึกษาเท่านั้น ยังไม่ใช่ระบบสำเร็จรูปสำหรับส่งคำสั่งด้วยเงินจริง ผู้อ่านควรทำความเข้าใจเงื่อนไข ข้อจำกัดของข้อมูล และทดสอบในสภาพแวดล้อมจำลอง (`Sandbox / Paper Trading`) ด้วยตนเองเสมอ

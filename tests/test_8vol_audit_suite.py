@@ -139,6 +139,30 @@ class TestEightVolumeAuditSuite(unittest.TestCase):
         self.assertEqual(partial_res["valid_levels_used"], 2)
         self.assertTrue(partial_res["is_thin_book_warning"])
 
+    def test_p0_4_final_trading_system_abcd_pipeline(self) -> None:
+        import tempfile
+        from final_trading_system_abcd import run_complete_final_system_demo
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            res = run_complete_final_system_demo(output_dir=Path(tmpdir))
+            plans = res["selected_plans"]
+            self.assertEqual(len(plans), 4)
+            self.assertEqual(
+                [p["strategy_code"] for p in plans],
+                ["STRATEGY_A", "STRATEGY_B", "STRATEGY_C", "STRATEGY_D"],
+            )
+            self.assertEqual(
+                [p["symbol"] for p in plans],
+                ["STOCK_ICT.BK", "STOCK_HELTH.BK", "STOCK_COMM.BK", "STOCK_BANK.BK"],
+            )
+            summary = res["portfolio_summary"]
+            self.assertLessEqual(summary["initial_portfolio_heat_pct"], 5.0)
+            self.assertGreaterEqual(summary["cash_reserve_pct"], 15.0)
+            self.assertTrue((Path(tmpdir) / "portfolio_positions_log.csv").exists())
+            self.assertTrue((Path(tmpdir) / "trade_decision_journal.json").exists())
+            bt = res["backtest_report"]
+            self.assertGreaterEqual(bt["walk_forward_efficiency_pct"], 50.0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

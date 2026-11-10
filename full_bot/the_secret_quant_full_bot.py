@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 =========================================================================================
-The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น
-FULL EDUCATIONAL TRADING BOT & BACKTEST ENGINE (END-TO-END, บทที่ 1 - บทที่ 14)
+เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python
+FULL EDUCATIONAL TRADING BOT & BACKTEST ENGINE (END-TO-END, บทที่ 1 - บทที่ 8)
 =========================================================================================
 ไฟล์นี้คือระบบ Quantitative Trading แบบครบวงจร (Full Working Version) สำหรับประกอบหนังสือ
-"The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น"
+"เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python"
 ผู้เขียน: ปฐมพงษ์ พิพัฒน์สุริยวงศ์
 
 คำเตือน:
@@ -1173,13 +1173,13 @@ def save_backtest_comparison_chart(
         ax1.axvspan(start_dt, common_dates[-1], color="#fecdd3", alpha=0.35, label="_nolegend_")
         ax2.axvspan(start_dt, common_dates[-1], color="#fecdd3", alpha=0.35, label="_nolegend_")
 
-    # Top Panel: Equity Curve (The Secret Quant Bot vs Normal Bot)
+    # Top Panel: Equity Curve (Disciplined 8-Chapter System Bot vs Normal Bot)
     ax1.plot(
         common_dates,
         q_eq,
         color="#059669",
         linewidth=2.6,
-        label=f"The Secret Quant Bot (Adaptive 3-Agent + HRP + ATR + Cash Shield): {quant_summary.total_combined_wealth:,.0f} THB ({quant_summary.total_return_pct:+.2f}%, Sharpe {quant_summary.sharpe_ratio:.2f}, {len(quant_summary.trades)} trades)",
+        label=f"Our 8-Chapter System Bot (Adaptive 3-Agent + HRP + ATR + Cash Shield): {quant_summary.total_combined_wealth:,.0f} THB ({quant_summary.total_return_pct:+.2f}%, Sharpe {quant_summary.sharpe_ratio:.2f}, {len(quant_summary.trades)} trades)",
     )
     ax1.plot(
         common_dates,
@@ -1191,7 +1191,7 @@ def save_backtest_comparison_chart(
     ax1.fill_between(common_dates, q_eq, n_eq, where=(q_eq >= n_eq), color="#10b981", alpha=0.10, interpolate=True)
     ax1.axhline(1_000_000, color="#475569", linewidth=0.9, linestyle=":")
     ax1.set_title(
-        "Head-to-Head Backtest Comparison: The Secret Quant Bot vs. Normal Bot (500 Trading Days | 1,000,000 THB)",
+        "Head-to-Head Backtest Comparison: Our 8-Chapter System Bot vs. Normal Bot (500 Trading Days | 1,000,000 THB)",
         fontsize=12.2,
         fontweight="bold",
         color="#0f172a",
@@ -1203,7 +1203,7 @@ def save_backtest_comparison_chart(
 
     # Bottom Panel: Drawdown (%)
     ax2.fill_between(common_dates, q_dd, 0, color="#10b981", alpha=0.24)
-    ax2.plot(common_dates, q_dd, color="#059669", linewidth=1.8, label=f"The Secret Quant Bot Drawdown (Max: {quant_summary.max_drawdown_pct:.2f}%)")
+    ax2.plot(common_dates, q_dd, color="#059669", linewidth=1.8, label=f"Our 8-Chapter System Drawdown (Max: {quant_summary.max_drawdown_pct:.2f}%)")
     ax2.fill_between(common_dates, n_dd, 0, color="#f43f5e", alpha=0.18)
     ax2.plot(common_dates, n_dd, color="#e11d48", linewidth=1.6, label=f"Normal Bot Drawdown (Max: {normal_summary.max_drawdown_pct:.2f}%)")
     ax2.axhline(-5.0, color="#d97706", linewidth=1.1, linestyle="--", label="-5.0% Max Portfolio Heat / Risk Guard")
@@ -1224,7 +1224,7 @@ def save_backtest_comparison_chart(
 # =========================================================================================
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย - Full Educational Trading Bot & Backtest Engine"
+        description="เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python - Full Educational Trading Bot & Backtest Engine"
     )
     parser.add_argument(
         "--csv",
@@ -1246,7 +1246,7 @@ def main() -> None:
     cfg = QuantConfig()
 
     print("=" * 92)
-    print("  The Secret Quant: วิเคราะห์หุ้นและสร้างระบบอย่างมีวินัย — ชุดเรียนรู้ด้วย Python ทีละขั้น (CH 1 - CH 14)")
+    print("  เลิกพึ่งบอทคนอื่น มาสร้างระบบเทรดของคุณเองด้วย Python — ระบบเทรดและ Backtest ฉบับสมบูรณ์ (บทที่ 1 - 8)")
     print("=" * 92)
 
     if args.regenerate_sample or not os.path.exists(args.csv):
@@ -1289,8 +1289,8 @@ def main() -> None:
     chart_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backtest_comparison_chart.png")
     save_backtest_comparison_chart(summary, normal_summary, idx_df, chart_out)
 
-    print("\n[5/6] สรุปผลการจำลองพอร์ตเปรียบเทียบ: The Secret Quant Bot vs. Normal Bot (บอททั่วไป):")
-    print(f"      {'ตัวชี้วัด (Metric)':<38} | {'The Secret Quant Bot':>20} | {'Normal Bot (บอททั่วไป)':>22}")
+    print("\n[5/6] สรุปผลการจำลองพอร์ตเปรียบเทียบ: ระบบของเรา (ครบ 8 บท) vs. Normal Bot (บอททั่วไป):")
+    print(f"      {'ตัวชี้วัด (Metric)':<38} | {'ระบบของเรา (ครบ 8 บท)':>20} | {'Normal Bot (บอททั่วไป)':>22}")
     print("      " + "-" * 86)
     print(f"      {'เงินทุนตั้งต้น (Initial Capital)':<38} | {summary.initial_capital:>16,.2f} บาท | {normal_summary.initial_capital:>18,.2f} บาท")
     print(f"      {'พอร์ตเทรดปลายงวด (Trading Equity)':<38} | {summary.final_trading_equity:>16,.2f} บาท | {normal_summary.final_trading_equity:>18,.2f} บาท")
